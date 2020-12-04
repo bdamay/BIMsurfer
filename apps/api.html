@@ -20,17 +20,18 @@
 
     <script type="module">
         import {BimSurfer} from "../viewer/bimsurfer.js";
-		import {BimServerClient} from "../../bimserverjavascriptapi/bimserverclient.js"
+		//import {BimServerClient} from "../../bimserverjavascriptapi/bimserverclient.js"
+    import { BimServerClient } from '../../../../node_modules/bimserverapi/bimserverclient.js';
 		import {Address} from "./address.js";
 		import {Credentials} from "./credentials.js"
-        
+
         var surfer = window.bimSurfer = new BimSurfer();
 
 		var api = new BimServerClient(Address.getApiAddress());
 		api.init().then(() => {
 			new Credentials(api).getCredentials().then(() => {
                 surfer.load({
-                    api: api, 
+                    api: api,
                     roid:65539,
                     domNode:document.querySelector("canvas")
                 }).then(generateApiReference).catch(errorHandler);
@@ -43,7 +44,7 @@
             oids = _.shuffle(oids);
             oids.splice(10);
             oids = "["+oids.join(", ")+"]";
-            
+
             var METHODS = [
                 {name:'setVisibility',     args:[{name: "ids", value: oids}, {name: "visible", value:false}]},
                 {name:'setVisibility',     args:[{name: "types", value: '["IfcWallStandardCase"]'}, {name: "visible", value:false}]},
@@ -63,7 +64,7 @@
 
             METHODS.forEach(function(m, i) {
                 n.innerHTML += "<h3>"+m.name+"()</h3>";
-                
+
                 var hasNamedArgs = false;
                 var args = m.args.map(function(a) {
                     if (a.name) {
@@ -73,11 +74,11 @@
                         return a;
                     }
                 }).join(", ");
-                
+
                 if (hasNamedArgs) {
                     args = "{"+args+"}";
                 }
-                
+
                 var cmd = "bimSurfer."+m.name+"("+args+");";
                 n.innerHTML += "<textarea rows=3 id='code"+i+"' spellcheck=false>"+cmd+"\n</textarea>";
                 var exec_statement = "eval(document.getElementById(\"code"+i+"\").value)"
@@ -87,7 +88,7 @@
                 }
                 n.innerHTML += "<button onclick='"+exec_statement+"'>run</button>";
             });
-            
+
             const eventHandlers = document.createElement("div");
             const onClickTextArea = document.createElement("textarea");
 			onClickTextArea.setAttribute("rows", 10);
