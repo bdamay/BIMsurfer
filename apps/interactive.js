@@ -1,5 +1,6 @@
 // At the moment this API is loaded from a BIMserver, you could also include the API files in your viewer
-import {BimServerClient} from "../../bimserverjavascriptapi/bimserverclient.js"
+//import {BimServerClient} from "../../bimserverjavascriptapi/bimserverclient.js"
+import { BimServerClient } from '../../../../node_modules/bimserverapi/bimserverclient.js'; // npm package in myapp
 import {BimServerViewer} from "../viewer/bimserverviewer.js"
 import {TreeView} from "../viewer/treeview.js"
 import {ProjectTreeModel} from "../viewer/projecttreemodel.js"
@@ -39,9 +40,9 @@ export class Interactive {
 				address: "https://epic.logic-labs.nl"
 			}
 		];
-		
+
 		document.getElementById("address").focus();
-		
+
 		document.getElementById("address").addEventListener("keypress", (event) => {
 			if (event.key == "Enter") {
 				this.connectServer({
@@ -59,9 +60,9 @@ export class Interactive {
 				this.login();
 			}
 		});
-		
+
 		this.showServers();
-		
+
 		for (const tab of document.querySelectorAll("#tabs .tab")) {
 			tab.addEventListener("click", (e) => {
 				if (e.target.id == "serversTab") {
@@ -78,7 +79,7 @@ export class Interactive {
 			});
 		}
 	}
-	
+
 	showTab(tabId) {
 		if (this.currentTab != null) {
 			this.currentTab.hidden = true;
@@ -88,7 +89,7 @@ export class Interactive {
 		this.currentTab = document.getElementById(tabId);
 		this.currentTab.hidden = false;
 	}
-	
+
 	showServers() {
 		this.showTab("servers");
 		var interactive = document.getElementById("serverList");
@@ -131,7 +132,7 @@ export class Interactive {
 			});
 		});
 	}
-	
+
 	login() {
 		document.getElementById("loginStatus").innerHTML = "Logging in...";
 		this.api.login(document.getElementById("username").value, document.getElementById("password").value, () => {
@@ -141,7 +142,7 @@ export class Interactive {
 			document.getElementById("loginStatus").innerHTML = error.message;
 		});
 	}
-	
+
 	showLogin() {
 		this.showTab("login");
 		document.getElementById("username").focus();
@@ -150,7 +151,7 @@ export class Interactive {
 			this.login();
 		});
 	}
-	
+
 	showSelectProject() {
 		this.showTab("selectProject");
 		var selectProject = document.getElementById("selectProject");
@@ -163,7 +164,7 @@ export class Interactive {
 			this.showSelectRevision(node.project);
 		});
 	}
-	
+
 	showSelectRevision(project) {
 		this.showTab("selectRevision");
 		var revisionsParent = document.getElementById("selectRevision");
@@ -191,13 +192,13 @@ export class Interactive {
 
 	connectServer(server) {
 		console.log("Connecting...", server.address);
-		
+
 		this.api = new BimServerClient(server.address);
 		this.api.init().then(() => {
 			this.showLogin();
 		});
 	}
-	
+
 	ping(server, status) {
 		var request = new XMLHttpRequest();
 		request.open("GET", server.address, true);

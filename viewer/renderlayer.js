@@ -8,7 +8,7 @@ import {FrozenBufferSet} from "./frozenbufferset.js";
 
 import {AvlTree} from "./collections/avltree.js";
 
-const outlineColor = new Float32Array([1.0, 0.5, 0.0, 1.0]);
+const outlineColor = new Float32Array([0, 1, 1, 0.3]); // i like cyan
 const false_true = [false, true];
 const UINT32_MAX = (new Uint32Array((new Int32Array([-1])).buffer))[0];
 
@@ -19,12 +19,12 @@ let WEBGL_multi_draw = null;
  * Abstract base class for managing and rendering buffers pertaining
  * to a render layer, ie. the base geometries always visible vs. the
  * dynamically visible tiles based on camera orientation.
- * 
+ *
  * @export
  * @class RenderLayer
  */
 export class RenderLayer {
-	
+
 	constructor(viewer, geometryDataToReuse) {
 		this.settings = viewer.settings;
 		this.viewer = viewer;
@@ -36,15 +36,15 @@ export class RenderLayer {
 		this.previousInstanceVisibilityState = null;
 
 		this.selectionOutlineMatrix = mat4.create();
-		
+
 		this.lines = null;
 		this.loaders = new Map();
 		this.bufferTransformer = new BufferTransformer(this.settings, viewer.vertexQuantization);
-		
+
 		this.nrPrimitivesLoaded = 0;
 		this.nrTrianglesLoaded = 0;
 		this.nrLinesLoaded = 0;
-		
+
 		this.postProcessingTranslation = vec3.fromValues(0, 0, 0);
 	}
 
@@ -71,7 +71,7 @@ export class RenderLayer {
 				matrices: [],
 				objects: []
 		};
-		
+
 		var loader = this.getLoader(loaderId);
 
 		loader.geometries.set(geometryId, geometry);
@@ -84,7 +84,7 @@ export class RenderLayer {
 
 		return geometry;
 	}
-	
+
 	createObject(loaderId, roid, uniqueId, geometryIds, matrix, normalMatrix, scaleMatrix, hasTransparency, type, aabb, gpuBufferManager, node) {
 		var loader = this.getLoader(loaderId);
 		var object = {
@@ -106,18 +106,18 @@ export class RenderLayer {
 		loader.objects.set(uniqueId, object);
 
 		var globalizedAabb = Utils.transformBounds(aabb, this.viewer.globalTranslationVector);
-		
+
 		var viewObject = {
             type: type,
 			aabb: aabb,
 			globalizedAabb: globalizedAabb,
 			uniqueId: uniqueId
 		};
-		
+
 		if (node) {
 			viewObject.node = node;
 		}
-		
+
 		this.viewer.addViewObject(uniqueId, viewObject);
 
 		geometryIds.forEach((id) => {
@@ -145,11 +145,11 @@ export class RenderLayer {
 				vertex[0] = geometry.positions[i + 0];
 				vertex[1] = geometry.positions[i + 1];
 				vertex[2] = geometry.positions[i + 2];
-				
+
 				// If the geometry loader loads quantized data we need to unquantize first
 				// TODO there is a possible performance improvement possible for all modelset where the totalBounds of the modelSet are the same as for each individual submodel (for example all projects without subprojects).
 				// In that case we won't have to unquantize + quantize again
-				
+
 				if (this.settings.loaderSettings.quantizeVertices) {
 					vec3.transformMat4(vertex, vertex, this.viewer.vertexQuantization.getUntransformedInverseVertexQuantizationMatrixForUniqueModelId(geometry.uniqueModelId));
 				}
@@ -157,7 +157,7 @@ export class RenderLayer {
 				if (this.settings.quantizeVertices) {
 					vec3.transformMat4(vertex, vertex, this.viewer.vertexQuantization.vertexQuantizationMatrixWithGlobalTranslation);
 				}
-				
+
 				buffer.positions.set(vertex, buffer.positionsIndex);
 				buffer.positionsIndex += 3;
 			}
@@ -177,7 +177,7 @@ export class RenderLayer {
 				vec3.transformMat3(floatNormal, floatNormal, object.normalMatrix);
 				vec3.normalize(floatNormal, floatNormal);
 				// TODO this results in vectors with a negative magnitude... (at least on the unquantized data) We should probably do something with that information
-				// Also the number becomes really small, resulting in all zeros when quantizing again, that can't be right				
+				// Also the number becomes really small, resulting in all zeros when quantizing again, that can't be right
 
 				if (quantizeNormals) {
 					intNormal[0] = floatNormal[0] * 127;
@@ -218,7 +218,7 @@ export class RenderLayer {
 							color[2] = color[2] / 255;
 							color[3] = color[3] / 255;
 						}
-						
+
 						buffer.colors.set(color, buffer.colorsIndex);
 						buffer.colorsIndex += 4;
 					}
@@ -233,7 +233,7 @@ export class RenderLayer {
 
 			var li = (buffer.uniqueIdToIndex.get(object.uniqueId) || []);
 			var idx = {
-				start: buffer.indicesIndex, 
+				start: buffer.indicesIndex,
 				length: geometry.indices.length,
 				lineIndexStart: buffer.lineIndicesIndex,
 				lineIndexLength: geometry.lineIndices.length,
@@ -243,7 +243,7 @@ export class RenderLayer {
 			li.push(idx);
 			buffer.uniqueIdToIndex.set(object.uniqueId, li);
 			buffer.uniqueIdSet.add(object.uniqueId);
-			
+
 			var index = Array(3);
 			for (var i=0; i<geometry.indices.length; i+=3) {
 				index[0] = geometry.indices[i + 0] + startIndex;
@@ -258,7 +258,7 @@ export class RenderLayer {
 						idx.maxIndex = index[j];
 					}
 				}
-				
+
 				buffer.indices.set(index, buffer.indicesIndex);
 				buffer.indicesIndex += 3;
 			}
@@ -266,7 +266,7 @@ export class RenderLayer {
 				index[0] = geometry.lineIndices[i + 0] + startIndex;
 				index[1] = geometry.lineIndices[i + 1] + startIndex;
 				index[2] = geometry.lineIndices[i + 2] + startIndex;
-				
+
 				for (var j=0; j<3; j++) {
 					if (idx.minLineIndex == null || index[j] < idx.minLineIndex) {
 						idx.minLineIndex = index[j];
@@ -292,12 +292,12 @@ export class RenderLayer {
 
 		buffer.nrIndices += geometry.indices.length;
 		buffer.bytes += geometry.bytes;
-		
+
 		if (buffer.needsToFlush) {
 			this.flushBuffer(buffer);
 		}
 	}
-	
+
 	storeMissingGeometry(geometryLoader, map) {
 		// TODO this is only applicable for the TilingRenderLayer, in other layers it's usually an indication of an error
 		if (this.loaderToNode != null) {
@@ -306,7 +306,7 @@ export class RenderLayer {
 				var geometryInfoIds = map.get(geometryDataId);
 				this.geometryCache.integrate2(geometryDataId, this.getLoader(geometryLoader.loaderId), node.gpuBufferManager, geometryInfoIds, geometryLoader);
 			}
-			
+
 			// We need to start loading some GeometryData at some point, and add the missing pieces
 			if (!this.geometryCache.isEmpty()) {
 				this.reuseLoader.load(this.geometryCache.pullToLoad());
@@ -315,7 +315,7 @@ export class RenderLayer {
 			console.log("Missing", map);
 		}
 	}
-	
+
 	addGeometryToObject(geometryId, uniqueId, loader, gpuBufferManager) {
 		var geometry = loader.geometries.get(geometryId);
 		if (geometry == null) {
@@ -336,7 +336,7 @@ export class RenderLayer {
 			}
 		}
 	}
-	
+
 	addGeometryReusable(geometry, loader, gpuBufferManager) {
 		if (geometry.lineIndices == null) {
 			debugger;
@@ -354,7 +354,7 @@ export class RenderLayer {
 			: null;
 		const indexBuffer = Utils.createIndexBuffer(this.gl, this.bufferTransformer.convertIndices(geometry.indices, geometry.positions.length));
 		const lineIndexBuffer = geometry.lineIndices ? Utils.createLineIndexBuffer(this.gl, this.bufferTransformer.convertIndices(geometry.lineIndices, geometry.positions.length)) : null;
-		
+
 		let color, colorHash;
 
 		if (this.settings.useObjectColors) {
@@ -365,23 +365,23 @@ export class RenderLayer {
 		let buffer = new FrozenBufferSet(
 			this.viewer,
 			null,
-			
+
 			positionBuffer,
 			normalBuffer,
 			colorBuffer,
 			null,
 			indexBuffer,
 			lineIndexBuffer,
-			
+
 			color,
 			colorHash,
-			
+
 			geometry.indices.length,
 			geometry.lineIndices ? geometry.lineIndices.length : 0,
 			normalBuffer.N,
 			positionBuffer.N,
 			colorBuffer.N,
-			
+
 			null,
 			null,
 			null,
@@ -399,12 +399,12 @@ export class RenderLayer {
 		buffer.numInstances = numInstances;
 		buffer.nrTrianglesToDraw = (buffer.nrIndices / 3) * geometry.matrices.length;
 		buffer.nrLinesToDraw = (buffer.nrLineIndices / 2) * geometry.matrices.length;
-		
+
 		buffer.setObjects(this.gl, geometry.objects);
 		buffer.buildVao(this.gl, this.settings, programInfo, pickProgramInfo, lineProgramInfo);
 
 		buffer.uniqueIdToIndex = new AvlTree(this.viewer.inverseUniqueIdCompareFunction);
-		
+
 		geometry.objects.forEach((obj) => {
 			buffer.uniqueIdSet.add(obj.uniqueId);
 			this.viewer.uniqueIdToBufferSet.set(obj.uniqueId, [buffer]);
@@ -421,29 +421,29 @@ export class RenderLayer {
 			this.progressListener(this.nrTrianglesLoaded, this.nrLinesLoaded);
 		}
 
-		var toadd = 
-			geometry.bytes + 
+		var toadd =
+			geometry.bytes +
 			geometry.matrices.length * 16 * 4 + // vertex matrices
 			geometry.matrices.length * 9 * 4; // normal matrices
-		
+
 		this.viewer.stats.inc("Data", "GPU bytes reuse", toadd);
 		this.viewer.stats.inc("Data", "GPU bytes total", toadd);
 
 		geometry.buffer = buffer;
 	}
-	
+
 	getLoader(loaderId) {
 		return this.loaders.get(loaderId);
 	}
-	
+
 	removeLoader(loaderId) {
 		this.loaders.delete(loaderId);
 	}
-	
+
 	getObject(loaderId, identifier) {
 		return this.getLoader(loaderId).objects.get(identifier);
 	}
-	
+
 	registerLoader(loaderId) {
 		this.loaders.set(loaderId, {
 			loaderId: loaderId,
@@ -451,26 +451,26 @@ export class RenderLayer {
 			geometries: new Map()
 		});
 	}
-	
+
 	renderBuffers(transparency, twoSidedTriangles, reuse, lineRender, visibleElements) {
 		console.log("Not implemented in this layer");
 	}
-	
+
 	/*
 	 * Prepare the rendering pass, this is called only once for each frame
-	 */	
+	 */
 	prepareRender() {
 		// this.lastUniqueModelIdRendered is used to keep track of which uniqueModelId was rendered previously, so we can skip some GPU calls, need to reset it though for each new frame
 		this.lastUniqueModelIdRendered = null;
 	}
-	
+
 	render(transparency, lineRender, twoSidedTriangles, visibleElements) {
 		this.renderBuffers(transparency, twoSidedTriangles, false, lineRender, visibleElements);
 		if (this.settings.gpuReuse) {
 			this.renderBuffers(transparency, twoSidedTriangles, true, lineRender, visibleElements);
 		}
 	}
-	
+
 	renderFinalBuffers(buffers, programInfo, visibleElements, lines) {
 		if (buffers != null && buffers.length > 0) {
 			let picking = visibleElements.pass === 'pick';
@@ -493,10 +493,10 @@ export class RenderLayer {
 			}
 		}
 	}
-	
+
 	renderBuffer(buffer, programInfo, visibleElements, lines) {
 		const gl = this.gl;
-		
+
 		// console.log(programInfo.uniformLocations);
 
 		let picking = visibleElements.pass === 'pick';
@@ -515,16 +515,16 @@ export class RenderLayer {
 					console.log("No uniqueModelId");
 				}
 			}
-			
+
 			let subset = buffer.computeVisibleInstances(visibleElements, this.gl);
 			if (subset.somethingVisible) {
 				if (subset.instanceIds.length > this.instanceSelectionData.length) {
 					console.error("Too many instances of a geometry are activated.");
 				} else {
 					// A bit unreadable, but much faster than concat + join
-					const instanceVisibilityState = 
+					const instanceVisibilityState =
 						(visibleElements.pass != null ? (visibleElements.pass + ",") : "") +
-						(subset.hidden != null ? (subset.hidden + ",") : "") + 
+						(subset.hidden != null ? (subset.hidden + ",") : "") +
 						subset.instanceIds.join(",");
 
 					// Disabled caching for now because it's does seem to hide all line renders
@@ -533,12 +533,12 @@ export class RenderLayer {
 						this.instanceSelectionData.set(subset.instanceIds);
 
 						// TODO Maybe we can store this in a buffer instead of send it as a uniform?
-						
+
 						// console.log("selection", visibleElements.pass, subset.hidden ? "hide" : "show", ...this.instanceSelectionData.subarray(0, subset.instanceIds.length));
 						gl.uniform1uiv(programInfo.uniformLocations.containedInstances, this.instanceSelectionData);
 						gl.uniform1ui(programInfo.uniformLocations.numContainedInstances, subset.instanceIds.length);
 						gl.uniform1ui(programInfo.uniformLocations.containedMeansHidden, subset.hidden ? 1 : 0);
-						
+
 						// Ruben: Is this really ok? Do we need to clear it? Can this really be stored in the renderlayer?
 						this.previousInstanceVisibilityState = instanceVisibilityState;
 //					}
@@ -570,7 +570,7 @@ export class RenderLayer {
 				const visibleRanges = buffer.computeVisibleRangesAsBuffers(visibleElements, this.gl);
 				if (visibleRanges && visibleRanges.pos > 0) {
 					// TODO add buffer.nrTrianglesToDraw code
-					
+
 					if (WEBGL_multi_draw) {
 						// This is available on Chrome Canary 75
 						if (lines) {
@@ -595,7 +595,7 @@ export class RenderLayer {
 		}
 		// Enabled, this kind of doubles the amount of GPU calls during rendering, but disabled resulted in errors, somehow some old buffers keep being used if we don't do this
 		this.gl.bindVertexArray(null);
-	}	
+	}
 
 	/**
 	 * Add a buffer that is already prepared
@@ -609,7 +609,7 @@ export class RenderLayer {
 		if (buffer.nrIndices == 0) {
 			return newBuffer;
 		}
-		
+
 		var programInfo = this.viewer.programManager.getProgram(this.viewer.programManager.createKey(false, false));
         var pickProgramInfo = this.viewer.programManager.getProgram(this.viewer.programManager.createKey(false, true));
 		var lineProgramInfo = this.viewer.programManager.getProgram(this.viewer.programManager.createKey(false, false, true));
@@ -618,23 +618,23 @@ export class RenderLayer {
 			newBuffer = new FrozenBufferSet(
 				this.viewer,
 				buffer,
-				
+
 				buffer.vertices,
 				buffer.normals,
 				buffer.colors,
 				buffer.pickColors,
 				buffer.indices,
 				buffer.lineIndices,
-				
+
 				null,
 				0,
-				
+
 				buffer.nrIndices,
 				buffer.nrLineIndices,
 				buffer.normalsIndex,
 				buffer.positionsIndex,
 				buffer.colorsIndex,
-				
+
 				null,
 				null,
 				null,
@@ -645,11 +645,11 @@ export class RenderLayer {
 				this,
 				gpuBufferManager
 			);
-			
+
 			newBuffer.nrTrianglesToDraw = buffer.nrIndices / 3;
 			newBuffer.nrLinesToDraw = buffer.nrLineIndices / 2;
 			newBuffer.hasTwoSidedTriangles = buffer.hasTwoSidedTriangles;
-			
+
 			newBuffer.unquantizationMatrix = buffer.unquantizationMatrix;
 
 			newBuffer.uniqueIdToIndex = buffer.uniqueIdToIndex;
@@ -657,12 +657,12 @@ export class RenderLayer {
 				debugger;
 			}
 			newBuffer.uniqueIdSet = buffer.uniqueIdSet;
-			
+
 			newBuffer.buildVao(this.gl, this.settings, programInfo, pickProgramInfo, lineProgramInfo);
-					
+
 			gpuBufferManager.pushBuffer(newBuffer);
 		}
-		
+
 //		this.incLoadedTriangles(buffer.indicesRead / 3);
 		this.viewer.stats.inc("Data", "GPU bytes", buffer.bytes);
 		this.viewer.stats.inc("Data", "GPU bytes total", buffer.bytes);
@@ -671,7 +671,7 @@ export class RenderLayer {
 
 		return newBuffer;
 	}
-	
+
 	incLoadedPrimitives(triangles, lines) {
 		this.nrTrianglesLoaded += triangles;
 		this.nrLinesLoaded += lines;
@@ -682,7 +682,7 @@ export class RenderLayer {
 			this.progressListener(this.nrTrianglesLoaded, this.nrLinesLoaded);
 		}
 	}
-	
+
 	flushBuffer(buffer, gpuBufferManager) {
 		var newBuffer = null;
 		if (buffer == null) {
@@ -691,7 +691,7 @@ export class RenderLayer {
 		if (buffer.nrIndices == 0) {
 			return newBuffer;
 		}
-		
+
 		var programInfo = this.viewer.programManager.getProgram(this.viewer.programManager.createKey(false, false));
 		var pickProgramInfo = this.viewer.programManager.getProgram(this.viewer.programManager.createKey(false, true));
 		var lineProgramInfo = this.viewer.programManager.getProgram(this.viewer.programManager.createKey(false, false, true));
@@ -711,7 +711,7 @@ export class RenderLayer {
 				debugger;
 			}
 			const lineIndexBuffer = buffer.lineIndices ? Utils.createLineIndexBuffer(this.gl, buffer.lineIndices, buffer.lineIndicesIndex) : null;
-			
+
 			let color, colorHash;
 
 			if (this.settings.useObjectColors) {
@@ -729,16 +729,16 @@ export class RenderLayer {
 				pickColorBuffer,
 				indexBuffer,
 				lineIndexBuffer,
-				
+
 				color,
 				colorHash,
-				
+
 				buffer.nrIndices,
 				buffer.nrLineIndices,
 				buffer.normalsIndex,
 				buffer.positionsIndex,
 				buffer.colorsIndex,
-				
+
 				null,
 				null,
 				null,
@@ -749,10 +749,10 @@ export class RenderLayer {
 				this,
 				gpuBufferManager
 			);
-			
+
 			newBuffer.nrTrianglesToDraw = buffer.nrIndices / 3;
 			newBuffer.nrLinesToDraw = buffer.nrLineIndices / 2;
-			
+
 			newBuffer.buildVao(this.gl, this.settings, programInfo, pickProgramInfo, lineProgramInfo);
 
 			if (buffer.uniqueIdToIndex) {
@@ -761,12 +761,12 @@ export class RenderLayer {
 					li.push(newBuffer);
 					this.viewer.uniqueIdToBufferSet.set(key, li);
 				}
-			}			
-			
+			}
+
 			gpuBufferManager.pushBuffer(newBuffer);
 			this.viewer.dirty = 2;
 		}
-		
+
 		if (!buffer.isCopy) {
 			this.nrTrianglesLoaded += buffer.nrIndices / 3;
 			this.nrLinesLoaded += buffer.lineIndices / 3;
@@ -824,7 +824,8 @@ export class RenderLayer {
 										}
 										// TODO move outlineColor to renderStart, saves us another uniform, same probably for width
 										// TODO selectionOutlineMatrix most of the is an identify matrix, no need to send that to the GPU?
-										lines.render(outlineColor, lines.matrixMap.get(id) || this.selectionOutlineMatrix, width || 0.01);
+
+										lines.render(outlineColor, lines.matrixMap.get(id) || this.selectionOutlineMatrix, width || 0.001);
 										lastLineRenderer = lines;
 									}
 								}

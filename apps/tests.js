@@ -1,4 +1,5 @@
-import {BimServerClient} from "../../bimserverjavascriptapi/bimserverclient.js"
+//import {BimServerClient} from "../../bimserverjavascriptapi/bimserverclient.js"
+import { BimServerClient } from '../../../../node_modules/bimserverapi/bimserverclient.js'; // npm package in myapp
 import {BimServerViewer} from "../viewer/bimserverviewer.js"
 import {Stats} from "../viewer/stats.js"
 import {Settings} from "../viewer/settings.js"
@@ -46,8 +47,8 @@ export default class Tests {
 
 		var testRuns = [];
 		this.applyAspect(testRuns, 0, configurableAspects, {});
-		
-		this.api = new BimServerClient("http://localhost:8080");
+
+		this.api = new BimServerClient("http://localhost:8082");
 		this.api.init(() => {
 			this.api.login("admin@bimserver.org", "admin", () => {
 				this.api.call("ServiceInterface", "getProjectsByName", {
@@ -63,17 +64,17 @@ export default class Tests {
 			});
 		});
 	}
-	
+
 	runTest(roid, tests, index) {
 		console.log("Running test", index);
-		
+
 		var test = tests[index];
 		var settings = DefaultSettings.create();
 		settings.autoResize = false;
 		for (var key in test) {
 			settings[key] = test[key];
 		}
-		
+
 		this.canvas = document.getElementById("glcanvas");
 		var stats = new Stats(false);
 		this.loadModel(roid, stats, settings).then(() => {

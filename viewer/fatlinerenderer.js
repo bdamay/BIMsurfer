@@ -11,11 +11,11 @@ import { LINE_PRIMITIVES } from "./programmanager.js";
  * lines are rendered using triangles. This greatly blows up the memory
  * requirements as enough information needs to be passed to expand lines
  * in the vertex shader to a constant thickness. See below:
- * 
+ *
  * @todo: we should probably see if some of this overhead can be reduced
  *        with drawElementsInstanced() or by cleverly aligning strides and
  *        or offsets.
- * 
+ *
  * (A,B,-1)                                     (B,A,-1)
  *  +-------------------------------------------------+
  *  |                                                 |
@@ -25,7 +25,7 @@ import { LINE_PRIMITIVES } from "./programmanager.js";
  *  |                                                 |
  *  +-------------------------------------------------+
  * (A,B,1)                                       (B,A,1)
- * 
+ *
  */
 export class FatLineRenderer {
 	constructor(viewer, gl, settings, unquantizationMatrix) {
@@ -160,7 +160,7 @@ export class FatLineRenderer {
 		this.gl.uniformMatrix4fv(this.programInfo.uniformLocations.projectionMatrix, false, viewer.camera.projMatrix);
 		this.gl.uniformMatrix4fv(this.programInfo.uniformLocations.viewMatrix, false, viewer.camera.viewMatrix);
 		this.gl.uniform3fv(this.programInfo.uniformLocations.postProcessingTranslation, renderLayer.postProcessingTranslation);
-		
+
 		const aspect = viewer.width / viewer.height;
 		this.gl.uniform1f(this.programInfo.uniformLocations.aspect, aspect);
 
@@ -186,7 +186,6 @@ export class FatLineRenderer {
 		for (const fn of this.setupFunctions) {
 			fn(this.programInfo);
 		}
-
 		this.gl.uniform1f(this.programInfo.uniformLocations.thickness, thickness || 0.005);
 		this.gl.uniformMatrix4fv(this.programInfo.uniformLocations.matrix, false, matrix);
 		this.gl.uniform4fv(this.programInfo.uniformLocations.inputColor, color);

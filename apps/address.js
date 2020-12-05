@@ -12,7 +12,7 @@ export class Address {
 		} else {
 			// Return a default
 			console.log("Trying to connect to http://localhost:8082, because we don't know where to find BIMserver", document.location);
-			return "http://localhost:8082";
+			return "http://localhost:8082"; // bda => 8082 is port if running bimserver with jar file
 		}
 	}
 }

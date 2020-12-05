@@ -1,5 +1,6 @@
 import {Address} from "./address.js";
-import {BimServerClient} from "../../bimserverjavascriptapi/bimserverclient.js"
+// import {BimServerClient} from "../../bimserverjavascriptapi/bimserverclient.js"
+import { BimServerClient } from '../../../../node_modules/bimserverapi/bimserverclient.js'
 import {BimServerViewer} from "../viewer/bimserverviewer.js"
 import {Stats} from "../viewer/stats.js"
 import {Settings} from "../viewer/settings.js"
@@ -30,11 +31,11 @@ export class Dev {
 			}
 			this.loadProjects();
 		});
-		
+
 		// Deep-clone the settings, so we know we have a non-changing view of the settings
 		this.settings = JSON.parse(JSON.stringify(this.settingsView.settings));
 		this.settings.drawTileBorders = true;
-		
+
 		this.api = new BimServerClient(Address.getApiAddress());
 		this.api.init(() => {
 			new Credentials(this.api).getCredentials().then(() => {
@@ -53,7 +54,7 @@ export class Dev {
 			this.loadModel(node.project);
 		});
 	}
-	
+
 	keyPressListener(event) {
 		if (event.key == ' ') {
 			event.preventDefault();
@@ -67,18 +68,18 @@ export class Dev {
 		document.getElementById("viewer").style.display = "block";
 
 		this.animationEnabled = false;
-		
+
 		var canvasWrapper = document.getElementById("canvasWrapper");
 		this.canvas = document.createElement("canvas");
 		this.canvas.className = "full";
 		canvasWrapper.appendChild(this.canvas);
 
 		var stats = new Stats();
-		
+
 		stats.setParameter("Models", "Name", project.name);
-		
+
 		this.bimServerViewer = new BimServerViewer(this.settings, this.canvas, window.innerWidth, window.innerHeight, stats);
-		
+
 		this.bimServerViewer.setProgressListener((percentage) => {
 			document.getElementById("progress").style.display = "block";
 			document.getElementById("progress").style.width = percentage + "%";
@@ -97,7 +98,7 @@ export class Dev {
 			this.keyPressListener(event);
 		};
 		document.addEventListener("keypress", this.keyPressHandler);
-		
+
 		this.bimServerViewer.loadModel(this.api, project);
 	}
 }

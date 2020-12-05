@@ -25,7 +25,7 @@ export class DefaultRenderLayer extends RenderLayer {
 		}
 
 		this.gpuBufferManager = new GpuBufferManager(this.viewer);
-		
+
 		window.defaultRenderLayer = this;
 	}
 
@@ -37,7 +37,7 @@ export class DefaultRenderLayer extends RenderLayer {
 		super.addGeometryReusable(geometry, loader, gpuBufferManager);
 		this.viewer.stats.inc("Drawing", "Draw calls per frame (L1)");
 	}
-	
+
 	addGeometry(loaderId, geometry, object) {
 		// TODO some of this is duplicate code, also in tilingrenderlayer.js
 		if (geometry.reused > 1 && this.geometryDataToReuse != null && this.geometryDataToReuse.has(geometry.id)) {
@@ -53,7 +53,7 @@ export class DefaultRenderLayer extends RenderLayer {
 			vertices: geometry.positions.length,
 			normals: geometry.normals.length,
 			indices: geometry.indices.length,
-			lineIndices: geometry.lineIndices.length,
+			lineIndices: geometry.lineIndices ? geometry.lineIndices.length : 0, //bda pass over undefined bug
 			colors: (geometry.colors != null ? geometry.colors.length : 0),
 			pickColors: geometry.positions.length
 		};
@@ -103,13 +103,13 @@ export class DefaultRenderLayer extends RenderLayer {
 
 	addCompleteBuffer(buffer, gpuBufferManager) {
 		var newBuffer = super.addCompleteBuffer(buffer, gpuBufferManager);
-		
+
 		this.viewer.stats.inc("Drawing", "Draw calls per frame (L1)");
 		this.viewer.stats.inc("Drawing", "Triangles to draw (L1)", buffer.nrIndices / 3);
-		
+
 		return newBuffer;
 	}
-	
+
 	flushBuffer(buffer) {
 		let gpuBuffer = super.flushBuffer(buffer, this.gpuBufferManager);
 
@@ -120,12 +120,12 @@ export class DefaultRenderLayer extends RenderLayer {
 
 		return gpuBuffer;
 	}
-	
+
 	renderBuffers(transparency, twoSidedTriangles, reuse, lines, visibleElements) {
 		var buffers = this.gpuBufferManager.getBuffers(transparency, twoSidedTriangles, reuse);
 		if (buffers.length > 0) {
 			let picking = visibleElements.pass === 'pick';
-			
+
 			if (picking && lines) {
 				// No rendering of lines for picking
 				return;

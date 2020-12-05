@@ -31,7 +31,7 @@ pre {
     height:100%;
 }
 
-#apirefContainer h2, 
+#apirefContainer h2,
 #apirefContainer h3 {
     padding: 0;
     margin: 0;
@@ -42,7 +42,7 @@ pre {
 }
 
 canvas, .error {
-    width: 50%;
+    width: 75%;
     height: 100%;
     float: left;
 }
