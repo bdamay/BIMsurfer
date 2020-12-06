@@ -187,15 +187,13 @@ export class Viewer {
             this.resetVisibility();
           } else if (evt.key === 'o')  { // as hide "o"thers (unselected) => works only if selection is not empty
             // todo consider getting a substraction of two set and movig this to a dedicated method
-            if (this.selectedElements.size>0) {
-              this.setVisibility(this.viewObjects.keys(),false)
-              this.setVisibility(this.selectedElements, true, true, true);
-            }
+            this.hideUnselected()
           }
-          else if (evt.key === 'i')  { // as "i"nvert visibility => keep selection
-            let __invisible = new Set(this.invisibleElements) // create a copy of the invisible property
-            this.setVisibility(this.viewObjects.keys(),false, true, true)
-            this.setVisibility(__invisible, true, true, true);
+          else if (evt.key === 't')  {  // set unselected to transparent
+            this.setUnselectedTransparent()
+          }
+          else if (evt.key === 'i')  {
+            this.invertVisibility()
           }
           else if (evt.key === 'h' || evt.key ===' ' || evt.key === 'Spacebar') { // Spacebar is hiding element as in bimcollab Zoom
             this.setVisibility(this.selectedElements, false, false);
@@ -1054,6 +1052,43 @@ export class Viewer {
     this.setVisibility(this.invisibleElements.keys(), true, false);
     this.dirty = 2;
   }
+
+  hideUnselected() {
+    if (this.selectedElements.size>0) {
+      let allElements = new Set(this.viewObjects.keys());
+      let unselected = new Set([...allElements].filter(x => !this.selectedElements.has(x))); // substraction of sets as here
+      this.setVisibility(unselected,false)
+    }
+  }
+
+  invertVisibility()  {
+    // Actually keeps selection alive
+    let __invisible = new Set(this.invisibleElements) // create a copy of the invisible property that we'll have to set visible
+    this.setVisibility(this.viewObjects.keys(),false, true, true)
+    this.setVisibility(__invisible, true, true, true);
+  }
+
+  setUnselectedTransparent() {
+    // first we need to resetColrs
+    this.resetColors()
+    // then we build an unselected set of elements
+    let allElements = new Set(this.viewObjects.keys());
+    let unselected = new Set([...allElements].filter(x => !this.selectedElements.has(x))); // substraction of sets as here
+    // .. that we set to transparent
+    this.setTransparent(unselected)
+
+  }
+
+  setTransparent(elements) {
+    // Make a Set of elements transparent giving only x-ray effect
+    let clr = [1, 1, 1,  0.13]; // white and transparent is the best combination i can think of
+    // todo: problem is that it's coloring in white objects that are selected but behind one transparent object
+    //  (so as MEP behind a white transparent wall) - Cannot figure out a simple way to avoid this effect without
+    //  going deeper in my gl comprehension (bda)
+    this.setColor(elements, clr)
+  }
+
+
 
   addSelectionListener(listener) {
     this.eventHandler.on("selection_state_changed", listener.handler);
