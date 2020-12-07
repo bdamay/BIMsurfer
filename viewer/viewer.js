@@ -1,7 +1,4 @@
-import * as mat4 from "./glmatrix/mat4.js";
-import * as vec2 from "./glmatrix/vec2.js";
 import * as vec3 from "./glmatrix/vec3.js";
-import * as vec4 from "./glmatrix/vec4.js";
 
 import {ProgramManager} from "./programmanager.js";
 import {Lighting} from "./lighting.js";
@@ -16,10 +13,12 @@ import {SSQuad} from "./ssquad.js";
 import {FreezableSet} from "./freezableset.js";
 import {DefaultColors} from "./defaultcolors.js";
 import {AvlTree} from "./collections/avltree.js";
+import {SectionPlaneSet} from "./sectionplaneset.js";
 
 import {COLOR_FLOAT_DEPTH_NORMAL, COLOR_ALPHA_DEPTH} from './renderbuffer.js';
 import { WSQuad } from './wsquad.js';
 import {EventHandler} from "./eventhandler.js";
+import { AnimatedVec3 } from "./animatedvec3.js";
 
 
 // When a change in color results in a different
@@ -43,134 +42,107 @@ const OVERRIDE_FLAG = (1 << 30);
  * @class Viewer
  */
 
-const X = vec3.fromValues(1., 0., 0.);
-const Y = vec3.fromValues(0., 1., 0.);
-const Z = vec3.fromValues(0., 0., 1.);
-
 export class Viewer {
 
-  constructor(canvas, settings, stats, width, height) {
-    this.width = width;
-    this.height = height;
+    constructor(canvas, settings, stats, width, height) {
+        this.width = width;
+        this.height = height;
 
-    this.defaultColors = settings.defaultColors ? settings.defaultColors : DefaultColors;
+        this.defaultColors = settings.defaultColors ? settings.defaultColors : DefaultColors;
 
-    this.stats = stats;
-    this.settings = settings;
-    this.canvas = canvas;
-    this.camera = new Camera(this);
-    if (settings.useOverlay) {
-      this.overlay = new SvgOverlay(this.canvas, this.camera);
-    }
+        this.stats = stats;
+        this.settings = settings;
+        this.canvas = canvas;
+        this.camera = new Camera(this);
+        if (settings.useOverlay) {
+        	this.overlay = new SvgOverlay(this.canvas, this.camera);
+        }
 
-    this.gl = this.canvas.getContext('webgl2', {stencil: true, premultipliedAlpha: false, preserveDrawingBuffer: true});
+        this.gl = this.canvas.getContext('webgl2', {stencil: true, premultipliedAlpha: false, preserveDrawingBuffer: true});
 
-    if (!this.gl) {
-      alert('Unable to initialize WebGL. Your browser or machine may not support it.');
-      return;
-    }
+        if (!this.gl) {
+            alert('Unable to initialize WebGL. Your browser or machine may not support it.');
+            return;
+        }
 
-    if (!this.settings.loaderSettings.prepareBuffers || (this.settings.tilingLayerEnabled && this.settings.loaderSettings.tilingLayerReuse)) {
-      this.bufferSetPool = new BufferSetPool(1000, this.stats);
-    }
+        if (!this.settings.loaderSettings.prepareBuffers || (this.settings.tilingLayerEnabled && this.settings.loaderSettings.tilingLayerReuse)) {
+        	this.bufferSetPool = new BufferSetPool(1000, this.stats);
+        }
 
-    this.tmp_unproject = vec3.create();
+        this.tmp_unproject = vec3.create();
 
-    this.tmp_sectionU = vec3.create();
-    this.tmp_sectionV = vec3.create();
+        this.pickIdCounter = 1;
 
-    this.tmp_sectionA = vec3.create();
-    this.tmp_sectionB = vec3.create();
-    this.tmp_sectionC = vec3.create();
-    this.tmp_sectionD = vec3.create();
+        // Picking ID (unsigned int) -> ViewObject
+        // This is an array now since the picking ids form a continues array
+        this.pickIdToViewObject = [];
 
-    this.tmp_section_dir_2d = vec4.create();
+        this.renderLayers = new Set();
+        this.animationListeners = [];
+        this.colorRestore = [];
 
-    this.pickIdCounter = 1;
+        this.sectionPlanes = new SectionPlaneSet({viewer: this, n: 6});
 
-    this.sectionPlaneIsDisabled = true;
+        // For geometry loaded from non-bimserver sources we auto-increment
+        // an ID on the spot in the loader.
+        this.oidCounter = 1;
 
-    this.sectionPlaneValuesDisabled = new Float32Array(4);
-    this.sectionPlaneValuesDisabled.set([0,0,0,1]);
-
-    this.sectionPlaneValues = new Float32Array(4);
-    this.sectionPlaneValues2 = new Float32Array(4);
-
-    this.sectionPlaneValues.set(this.sectionPlaneValuesDisabled);
-    // this.sectionPlaneValues.set([0,1,1,-5000]);
-    this.sectionPlaneValues2.set(this.sectionPlaneValues);
-
-    // A SVG canvas overlay polygon to indicate section plane positioning
-    this.sectionplanePoly = null;
-
-    // Picking ID (unsigned int) -> ViewObject
-    // This is an array now since the picking ids form a continues array
-    this.pickIdToViewObject = [];
-
-    this.renderLayers = new Set();
-    this.animationListeners = [];
-    this.colorRestore = [];
-
-    // For geometry loaded from non-bimserver sources we auto-increment
-    // an ID on the spot in the loader.
-    this.oidCounter = 1;
-
-    // User can override this, default assumes strings to be used as unique object identifiers
-    if (this.settings.loaderSettings.useUuidAndRid) {
-      const collator = new Intl.Collator();
-      // TODO there is really no need to use a locale-aware comparator here, but somehow > or < does not seem to work, where it work should for string
-      this.uniqueIdCompareFunction = (a, b) => {
+        // User can override this, default assumes strings to be used as unique object identifiers
+        if (this.settings.loaderSettings.useUuidAndRid) {
+        	const collator = new Intl.Collator();
+        	// TODO there is really no need to use a locale-aware comparator here, but somehow > or < does not seem to work, where it work should for string
+        	this.uniqueIdCompareFunction = (a, b) => {
 //        		return a == b ? 0 : (a > b ? 1 : -1);
-        return collator.compare(a, b);
-      };
-      this.idAugmentationFunction = (id) => ("O" + id);
-    } else {
-      this.uniqueIdCompareFunction = (a, b) => {
-        return a - b;
-      };
-      this.idAugmentationFunction = (id) => (id | OVERRIDE_FLAG);
-    }
+        		return collator.compare(a, b);
+            };
+            this.idAugmentationFunction = (id) => ("O" + id);
+        } else {
+        	this.uniqueIdCompareFunction = (a, b) => {
+        		return a - b;
+            };
+            this.idAugmentationFunction = (id) => (id | OVERRIDE_FLAG);
+        }
 
-    /* Next function serves two purposes:
-     *	- We invert the uniqueIdCompareFunction because for some reason AvlTree sort is descending
-     *  - We convert the returned number to a fixed -1, 0 or 1, also because AvlTree does not handle any other numbers
-     */
-    this.inverseUniqueIdCompareFunction = (a, b) => {
-      let inverse = this.uniqueIdCompareFunction(b, a);
-      return inverse < 0 ? -1 : (inverse > 0 ? 1 : 0);
-    };
+        /* Next function serves two purposes:
+         *	- We invert the uniqueIdCompareFunction because for some reason AvlTree sort is descending
+         *  - We convert the returned number to a fixed -1, 0 or 1, also because AvlTree does not handle any other numbers
+         */
+        this.inverseUniqueIdCompareFunction = (a, b) => {
+        	let inverse = this.uniqueIdCompareFunction(b, a);
+        	return inverse < 0 ? -1 : (inverse > 0 ? 1 : 0);
+        };
 
-    this.uniqueIdToBufferSet = new AvlTree(this.inverseUniqueIdCompareFunction);
+        this.uniqueIdToBufferSet = new AvlTree(this.inverseUniqueIdCompareFunction);
 
-    // Object ID -> ViewObject
-    this.viewObjects = new Map();
+        // Object ID -> ViewObject
+        this.viewObjects = new Map();
 
-    // String -> ViewObject[]
-    this.viewObjectsByType = new Map();
+        // String -> ViewObject[]
+        this.viewObjectsByType = new Map();
 
-    // Null means everything visible, otherwise Set(..., ..., ...)
-    this.invisibleElements = new FreezableSet(this.uniqueIdCompareFunction);
+        // Null means everything visible, otherwise Set(..., ..., ...)
+        this.invisibleElements = new FreezableSet(this.uniqueIdCompareFunction);
 
-    // Elements for which the color has been overriden and transparency has
-    // changed. These elements are hidden} from their original buffers and
-    // recreated in a new buffer during the correct render pass. When elements
-    // are unhidden, the overridden elements need to stay hidden.
-    this.hiddenDueToSetColor = new Map();
-    this.originalColors = new Map();
+        // Elements for which the color has been overriden and transparency has
+        // changed. These elements are hidden} from their original buffers and
+        // recreated in a new buffer during the correct render pass. When elements
+        // are unhidden, the overridden elements need to stay hidden.
+        this.hiddenDueToSetColor = new Map();
+        this.originalColors = new Map();
 
-    // For instances the logic is even different, as the element matrices
-    // are removed} from the buffer and added back to different (instanced)
-    // bufferset. When undoing colors on reused geometries, the product matrix
-    // simply needs to be added back to the original.
-    this.instancesWithChangedColor = new Map();
+        // For instances the logic is even different, as the element matrices
+        // are removed} from the buffer and added back to different (instanced)
+        // bufferset. When undoing colors on reused geometries, the product matrix
+        // simply needs to be added back to the original.
+        this.instancesWithChangedColor = new Map();
 
-    this.selectedElements = new FreezableSet(this.uniqueIdCompareFunction);
+        this.selectedElements = new FreezableSet(this.uniqueIdCompareFunction);
 
-    this.useOrderIndependentTransparency = this.settings.realtimeSettings.orderIndependentTransparency;
+        this.useOrderIndependentTransparency = this.settings.realtimeSettings.orderIndependentTransparency;
 
-    // 0 -> Not dirty, 1 -> Kinda dirty, but rate-limit the repaints to 2/sec, 2 -> Really dirty, repaint ASAP
-    this._dirty = 0;
-    this.lastRepaint = 0;
+        // 0 -> Not dirty, 1 -> Kinda dirty, but rate-limit the repaints to 2/sec, 2 -> Really dirty, repaint ASAP
+        this._dirty = 0;
+        this.lastRepaint = 0;
 
 //        window._debugViewer = this;  // HACK for console debugging
 
@@ -217,275 +189,273 @@ export class Viewer {
         });
       }
     }
-  } // end of constructor
 
-  set dirty(dirty) {
-    this._dirty = dirty;
-  }
+    set dirty(dirty) {
+    	this._dirty = dirty;
+    }
 
-  get dirty() {
-    return this._dirty;
-  }
+    get dirty() {
+    	return this._dirty;
+    }
 
-  callByType(method, types, ...args) {
-    let elems = types.map((i) => this.viewObjectsByType.get(i) || [])
-      .reduce((a, b) => a.concat(b), [])
-      .map((o) => o.oid);
-    // Assuming all passed methods return a promise
-    return method.call(this, elems, ...args);
-  }
+    callByType(method, types, ...args) {
+        let elems = types.map((i) => this.viewObjectsByType.get(i) || [])
+            .reduce((a, b) => a.concat(b), [])
+            .map((o) => o.oid);
+        // Assuming all passed methods return a promise
+        return method.call(this, elems, ...args);
+    }
 
-  setVisibility(elems, visible, sort=true, fireEvent=true) {
-    elems = Array.from(elems);
-    // @todo. until is properly asserted, documented somewhere, it's probably best to explicitly sort() for now.
-    elems.sort(this.uniqueIdCompareFunction);
+    setVisibility(elems, visible, sort=true, fireEvent=true) {
+        elems = Array.from(elems);
+        // @todo. until is properly asserted, documented somewhere, it's probably best to explicitly sort() for now.
+        elems.sort(this.uniqueIdCompareFunction);
 
-    let fn = (visible ? this.invisibleElements.delete : this.invisibleElements.add).bind(this.invisibleElements);
-    let fn2 = this.idAugmentationFunction;
-    return this.invisibleElements.batch(() => {
-      elems.forEach((i) => {
-        fn(i);
-        // Show/hide transparently-adjusted counterpart (even though it might not exist)
-        fn(fn2(i));
-      });
-
-      // Make sure elements hidden due to setColor() stay hidden
-      for (let i of this.hiddenDueToSetColor.keys()) {
-        this.invisibleElements.add(i);
-      };
-
-      this.dirty = 2;
-
-      if (fireEvent) {
-        this.eventHandler.fire("visbility_changed", elems, visible);
-      }
-
-      return Promise.resolve();
-    });
-  }
-
-  setSelectionState(elems, selected, clear, fireEvent=true) {
-    return this.selectedElements.batch(() => {
-      if (clear) {
-        this.selectedElements.clear();
-      }
-
-      let fn = (selected ? this.selectedElements.add : this.selectedElements.delete).bind(this.selectedElements);
-      for (let e of elems) {
-        fn(e);
-      }
-
-      this.dirty = 2;
-
-      return Promise.resolve();
-    }).then(() => {
-      if (fireEvent) {
-        this.eventHandler.fire("selection_state_changed", elems, selected);
-      }
-    });
-  }
-
-  getSelected() {
-    return Array.from(this.selectedElements)
-      .map(this.viewObjects.get.bind(this.viewObjects));
-  }
-
-  resetColor(elems) {
-    return this.invisibleElements.batch(() => {
-      var bufferSetsToUpdate = this.generateBufferSetToOidsMap(elems);
-      return this.resetColorAlreadyBatched(elems, bufferSetsToUpdate);
-    });
-  }
-
-  resetColorAlreadyBatched(elems, bufferSetsToUpdate) {
-    for (let [bufferSetId, bufferSetObject] of bufferSetsToUpdate) {
-      var bufferSet = bufferSetObject.bufferSet;
-      let id_ranges = bufferSet.getIdRanges(elems);
-      let bounds = bufferSet.getBounds(id_ranges);
-      bufferSet.batchGpuRead(this.gl, ["positionBuffer", "normalBuffer", "colorBuffer", "pickColorBuffer"], bounds, () => {
-        for (let uniqueId of bufferSetObject.oids) {
-          if (this.hiddenDueToSetColor.has(uniqueId)) {
-            this.invisibleElements.delete(uniqueId);
-            let buffer = this.hiddenDueToSetColor.get(uniqueId);
-            buffer.manager.deleteBuffer(buffer);
-
-            this.hiddenDueToSetColor.delete(uniqueId);
-          } else if (this.originalColors.has(uniqueId)) {
-            this.uniqueIdToBufferSet.get(uniqueId).forEach((bufferSet) => {
-              const originalColor = this.originalColors.get(uniqueId);
-              bufferSet.setColor(this.gl, uniqueId, originalColor);
+        let fn = (visible ? this.invisibleElements.delete : this.invisibleElements.add).bind(this.invisibleElements);
+        let fn2 = this.idAugmentationFunction;
+        return this.invisibleElements.batch(() => {
+            elems.forEach((i) => {
+                fn(i);
+                // Show/hide transparently-adjusted counterpart (even though it might not exist)
+                fn(fn2(i));
             });
 
-            this.originalColors.delete(uniqueId);
-          } else if (this.instancesWithChangedColor.has(uniqueId)) {
-            let entry = this.instancesWithChangedColor.get(uniqueId);
-            entry.override.manager.deleteBuffer(entry.override);
-            entry.original.setObjects(this.gl, entry.original.objects.concat([entry.object]));
-            this.instancesWithChangedColor.delete(uniqueId);
-          }
-        }
-      });
-    }
-    this.dirty = 2;
-    return Promise.resolve();
-  }
+            // Make sure elements hidden due to setColor() stay hidden
+            for (let i of this.hiddenDueToSetColor.keys()) {
+                this.invisibleElements.add(i);
+            };
 
-  /**
-   * This will create a mapping from BufferSetId -> {bufferSet, oids[]}
-   * This is useful when we want to do batch updates of BufferSets, instead of randomly updating single objects in BufferSets
-   * The order already in elems will stay intact
-   */
-  generateBufferSetToOidsMap(elems) {
-    var bufferSetsToUpdate = new Map();
-    for (let uniqueId of elems) {
-      const bufferSets = this.uniqueIdToBufferSet.get(uniqueId);
-      if (bufferSets == null) {
-        continue;
-      }
-      var bufferSetObject = bufferSetsToUpdate.get(bufferSets[0].id);
-      if (bufferSetObject == null) {
-        bufferSetObject = {
-          oids: [],
-          bufferSet: bufferSets[0]
-        };
-        bufferSetsToUpdate.set(bufferSets[0].id, bufferSetObject);
-      }
-      bufferSetObject.oids.push(uniqueId);
-    }
-    return bufferSetsToUpdate;
-  }
+            this.dirty = 2;
 
-  setColor(elems, clr, fireEvent=true) {
-    let aug = this.idAugmentationFunction;
-    let promise = this.invisibleElements.batch(() => {
-      var bufferSetsToUpdate = this.generateBufferSetToOidsMap(elems);
-      // Reset colors first to clear any potential transparency overrides.
-      return this.resetColorAlreadyBatched(elems, bufferSetsToUpdate).then(() => {
-        for (let [bufferSetId, bufferSetObject] of bufferSetsToUpdate) {
-          var bufferSet = bufferSetObject.bufferSet;
-          var oids = bufferSetObject.oids;
-
-          let id_ranges = bufferSet.getIdRanges(oids);
-          let bounds = bufferSet.getBounds(id_ranges);
-
-          bufferSet.batchGpuRead(this.gl, ["positionBuffer", "normalBuffer", "colorBuffer", "pickColorBuffer"], bounds, () => {
-            for (const uniqueId of oids) {
-              let originalColor = bufferSet.setColor(this.gl, uniqueId, clr);
-              if (originalColor === false) {
-                let copiedBufferSet = bufferSet.copy(this.gl, uniqueId);
-                let clrSameType, newClrBuffer;
-                if (copiedBufferSet instanceof FrozenBufferSet) {
-                  clrSameType = new window[copiedBufferSet.colorBuffer.js_type](4);
-                  newClrBuffer = new window[copiedBufferSet.colorBuffer.js_type](copiedBufferSet.colorBuffer.N);
-                  copiedBufferSet.hasTransparency = clr[3] < 1.;
-                } else {
-                  clrSameType = new copiedBufferSet.colors.constructor(4);
-                  newClrBuffer = copiedBufferSet.colors;
-                  copiedBufferSet.hasTransparency = !bufferSet.hasTransparency;
-                }
-
-                let factor = clrSameType.constructor.name === "Uint8Array" ? 255. : 1.;
-
-                for (let i = 0; i < 4; ++i) {
-                  clrSameType[i] = clr[i] * factor;
-                }
-
-                for (let i = 0; i < newClrBuffer.length; i += 4) {
-                  newClrBuffer.set(clrSameType, i);
-                }
-
-                if (bufferSet.node) {
-                  copiedBufferSet.node = bufferSet.node;
-                }
-
-                let buffer;
-
-                if (copiedBufferSet instanceof FrozenBufferSet) {
-                  var programInfo = this.programManager.getProgram(this.programManager.createKey(true, false));
-                  var pickProgramInfo = this.programManager.getProgram(this.programManager.createKey(true, true));
-                  var lineProgramInfo = this.programManager.getProgram(this.programManager.createKey(true, false, true));
-
-                  copiedBufferSet.colorBuffer = Utils.createBuffer(this.gl, newClrBuffer, null, null, 4);
-
-                  let obj = bufferSet.objects.find(o => o.uniqueId === uniqueId);
-                  bufferSet.setObjects(this.gl, bufferSet.objects.filter(o => o.uniqueId !== uniqueId));
-                  copiedBufferSet.setObjects(this.gl, [obj]);
-
-                  copiedBufferSet.buildVao(this.gl, this.settings, programInfo, pickProgramInfo, lineProgramInfo);
-                  copiedBufferSet.manager.pushBuffer(copiedBufferSet);
-                  buffer = copiedBufferSet;
-
-                  // NB: Single bufferset entry is assumed here, which is the case for now.
-                  this.uniqueIdToBufferSet.get(uniqueId)[0] = buffer;
-
-                  this.instancesWithChangedColor.set(uniqueId, {
-                    object: obj,
-                    original: bufferSet,
-                    override: copiedBufferSet
-                  });
-                } else {
-                  buffer = bufferSet.owner.flushBuffer(copiedBufferSet, false);
-
-                  buffer.lineIndexBuffers = copiedBufferSet.lineIndexBuffers;
-
-                  // Note that this is an attribute on the bufferSet, but is
-                  // not applied to the actual webgl vertex data.
-                  buffer.uniqueId = aug(uniqueId);
-
-                  this.invisibleElements.add(uniqueId);
-                  this.hiddenDueToSetColor.set(uniqueId, buffer);
-                }
-              } else {
-                this.originalColors.set(uniqueId, originalColor);
-              }
+            if (fireEvent) {
+            	this.eventHandler.fire("visbility_changed", elems, visible);
             }
-          });
-        }
-        this._dirty = 2;
-        if (fireEvent) {
-          this.eventHandler.fire("color_changed", elems, clr);
-        }
-      });
-    });
-    return promise;
-  }
 
-  init() {
-    var promise = new Promise((resolve, reject) => {
-      this._dirty = 2;
-      this.then = 0;
-      if (this.settings.autoRender) {
-        this.running = true;
-      }
-      this.firstRun = true;
+            return Promise.resolve();
+        });
+    }
 
-      this.fps = 0;
-      this.timeLast = 0;
+    setSelectionState(elems, selected, clear, fireEvent=true) {
+        return this.selectedElements.batch(() => {
+            if (clear) {
+                this.selectedElements.clear();
+            }
 
-      this.canvas.oncontextmenu = function (e) { // Allow right-click for camera panning
-        e.preventDefault();
-      };
+            let fn = (selected ? this.selectedElements.add : this.selectedElements.delete).bind(this.selectedElements);
+            for (let e of elems) {
+                fn(e);
+            }
 
-      this.cameraControl = new CameraControl(this);
-      this.lighting = new Lighting(this);
-      this.programManager = new ProgramManager(this.gl, this.settings);
+            this.dirty = 2;
 
-      this.programManager.load().then(() => {
-        resolve();
-        if (this.running) {
-          requestAnimationFrame((now) => {
-            this.render(now);
-          });
-        }
-      });
+            return Promise.resolve();
+        }).then(() => {
+        	if (fireEvent) {
+        		this.eventHandler.fire("selection_state_changed", elems, selected);
+        	}
+        });
+    }
 
-      this.pickBuffer = new RenderBuffer(this.canvas, this.gl, COLOR_FLOAT_DEPTH_NORMAL);
-      this.oitBuffer = new RenderBuffer(this.canvas, this.gl, COLOR_ALPHA_DEPTH);
-      this.quad = new SSQuad(this.gl);
-      this.quad2 = new WSQuad(this, this.gl);
-    });
-    return promise;
-  }
+    getSelected() {
+        return Array.from(this.selectedElements)
+            .map(this.viewObjects.get.bind(this.viewObjects));
+    }
+
+    resetColor(elems) {
+    	return this.invisibleElements.batch(() => {
+			var bufferSetsToUpdate = this.generateBufferSetToOidsMap(elems);
+    		return this.resetColorAlreadyBatched(elems, bufferSetsToUpdate);
+		});
+    }
+
+    resetColorAlreadyBatched(elems, bufferSetsToUpdate) {
+    	for (let [bufferSetId, bufferSetObject] of bufferSetsToUpdate) {
+    		var bufferSet = bufferSetObject.bufferSet;
+			let id_ranges = bufferSet.getIdRanges(elems);
+			let bounds = bufferSet.getBounds(id_ranges);
+    		bufferSet.batchGpuRead(this.gl, ["positionBuffer", "normalBuffer", "colorBuffer", "pickColorBuffer"], bounds, () => {
+	    		for (let uniqueId of bufferSetObject.oids) {
+	    			if (this.hiddenDueToSetColor.has(uniqueId)) {
+	    				this.invisibleElements.delete(uniqueId);
+	    				let buffer = this.hiddenDueToSetColor.get(uniqueId);
+	    				buffer.manager.deleteBuffer(buffer);
+
+	    				this.hiddenDueToSetColor.delete(uniqueId);
+	    			} else if (this.originalColors.has(uniqueId)) {
+	    				this.uniqueIdToBufferSet.get(uniqueId).forEach((bufferSet) => {
+							const originalColor = this.originalColors.get(uniqueId);
+							bufferSet.setColor(this.gl, uniqueId, originalColor);
+	    				});
+
+	    				this.originalColors.delete(uniqueId);
+	    			} else if (this.instancesWithChangedColor.has(uniqueId)) {
+	    				let entry = this.instancesWithChangedColor.get(uniqueId);
+	    				entry.override.manager.deleteBuffer(entry.override);
+	    				entry.original.setObjects(this.gl, entry.original.objects.concat([entry.object]));
+	    				this.instancesWithChangedColor.delete(uniqueId);
+	    			}
+	    		}
+    		});
+    	}
+		this.dirty = 2;
+		return Promise.resolve();
+    }
+
+    /**
+     * This will create a mapping from BufferSetId -> {bufferSet, oids[]}
+     * This is useful when we want to do batch updates of BufferSets, instead of randomly updating single objects in BufferSets
+     * The order already in elems will stay intact
+     */
+    generateBufferSetToOidsMap(elems) {
+		var bufferSetsToUpdate = new Map();
+		for (let uniqueId of elems) {
+			const bufferSets = this.uniqueIdToBufferSet.get(uniqueId);
+			if (bufferSets == null) {
+				continue;
+			}
+			var bufferSetObject = bufferSetsToUpdate.get(bufferSets[0].id);
+			if (bufferSetObject == null) {
+				bufferSetObject = {
+					oids: [],
+					bufferSet: bufferSets[0]
+				};
+				bufferSetsToUpdate.set(bufferSets[0].id, bufferSetObject);
+			}
+			bufferSetObject.oids.push(uniqueId);
+		}
+		return bufferSetsToUpdate;
+    }
+
+    setColor(elems, clr, fireEvent=true) {
+        let aug = this.idAugmentationFunction;
+		let promise = this.invisibleElements.batch(() => {
+			var bufferSetsToUpdate = this.generateBufferSetToOidsMap(elems);
+			// Reset colors first to clear any potential transparency overrides.
+			return this.resetColorAlreadyBatched(elems, bufferSetsToUpdate).then(() => {
+				for (let [bufferSetId, bufferSetObject] of bufferSetsToUpdate) {
+					var bufferSet = bufferSetObject.bufferSet;
+					var oids = bufferSetObject.oids;
+
+					let id_ranges = bufferSet.getIdRanges(oids);
+					let bounds = bufferSet.getBounds(id_ranges);
+
+					bufferSet.batchGpuRead(this.gl, ["positionBuffer", "normalBuffer", "colorBuffer", "pickColorBuffer"], bounds, () => {
+						for (const uniqueId of oids) {
+							let originalColor = bufferSet.setColor(this.gl, uniqueId, clr);
+							if (originalColor === false) {
+								let copiedBufferSet = bufferSet.copy(this.gl, uniqueId);
+								let clrSameType, newClrBuffer;
+								if (copiedBufferSet instanceof FrozenBufferSet) {
+									clrSameType = new window[copiedBufferSet.colorBuffer.js_type](4);
+									newClrBuffer = new window[copiedBufferSet.colorBuffer.js_type](copiedBufferSet.colorBuffer.N);
+									copiedBufferSet.hasTransparency = clr[3] < 1.;
+								} else {
+									clrSameType = new copiedBufferSet.colors.constructor(4);
+									newClrBuffer = copiedBufferSet.colors;
+									copiedBufferSet.hasTransparency = !bufferSet.hasTransparency;
+								}
+
+								let factor = clrSameType.constructor.name === "Uint8Array" ? 255. : 1.;
+
+								for (let i = 0; i < 4; ++i) {
+									clrSameType[i] = clr[i] * factor;
+								}
+
+								for (let i = 0; i < newClrBuffer.length; i += 4) {
+									newClrBuffer.set(clrSameType, i);
+								}
+
+								if (bufferSet.node) {
+									copiedBufferSet.node = bufferSet.node;
+								}
+
+								let buffer;
+
+								if (copiedBufferSet instanceof FrozenBufferSet) {
+									var programInfo = this.programManager.getProgram(this.programManager.createKey(true, false));
+									var pickProgramInfo = this.programManager.getProgram(this.programManager.createKey(true, true));
+									var lineProgramInfo = this.programManager.getProgram(this.programManager.createKey(true, false, true));
+
+									copiedBufferSet.colorBuffer = Utils.createBuffer(this.gl, newClrBuffer, null, null, 4);
+
+									let obj = bufferSet.objects.find(o => o.uniqueId === uniqueId);
+									bufferSet.setObjects(this.gl, bufferSet.objects.filter(o => o.uniqueId !== uniqueId));
+									copiedBufferSet.setObjects(this.gl, [obj]);
+
+									copiedBufferSet.buildVao(this.gl, this.settings, programInfo, pickProgramInfo, lineProgramInfo);
+									copiedBufferSet.manager.pushBuffer(copiedBufferSet);
+									buffer = copiedBufferSet;
+
+									// NB: Single bufferset entry is assumed here, which is the case for now.
+									this.uniqueIdToBufferSet.get(uniqueId)[0] = buffer;
+
+									this.instancesWithChangedColor.set(uniqueId, {
+										object: obj,
+										original: bufferSet,
+										override: copiedBufferSet
+									});
+								} else {
+									buffer = bufferSet.owner.flushBuffer(copiedBufferSet, false);
+
+									buffer.lineIndexBuffers = copiedBufferSet.lineIndexBuffers;
+
+									// Note that this is an attribute on the bufferSet, but is
+									// not applied to the actual webgl vertex data.
+									buffer.uniqueId = aug(uniqueId);
+
+									this.invisibleElements.add(uniqueId);
+									this.hiddenDueToSetColor.set(uniqueId, buffer);
+								}
+							} else {
+								this.originalColors.set(uniqueId, originalColor);
+							}
+						}
+					});
+				}
+				this._dirty = 2;
+				if (fireEvent) {
+					this.eventHandler.fire("color_changed", elems, clr);
+				}
+			});
+		});
+		return promise;
+    }
+
+    init() {
+        var promise = new Promise((resolve, reject) => {
+            this._dirty = 2;
+            this.then = 0;
+            if (this.settings.autoRender) {
+            	this.running = true;
+            }
+            this.firstRun = true;
+
+            this.fps = 0;
+            this.timeLast = 0;
+
+            this.canvas.oncontextmenu = function (e) { // Allow right-click for camera panning
+                e.preventDefault();
+            };
+
+            this.cameraControl = new CameraControl(this);
+            this.lighting = new Lighting(this);
+            this.programManager = new ProgramManager(this.gl, this.settings);
+
+            this.programManager.load().then(() => {
+                resolve();
+                if (this.running) {
+                	requestAnimationFrame((now) => {
+                        this.render(now);
+                	});
+                }
+            });
+
+            this.pickBuffer = new RenderBuffer(this.canvas, this.gl, COLOR_FLOAT_DEPTH_NORMAL);
+            this.oitBuffer = new RenderBuffer(this.canvas, this.gl, COLOR_ALPHA_DEPTH);
+            this.quad = new SSQuad(this.gl);
+        });
+        return promise;
+    }
 
   setDimensions(width, height) {
     this.width = width;
@@ -522,8 +492,11 @@ export class Viewer {
       this.stats.update();
     }
 
-    if (this.running) {
+    if (this.running || AnimatedVec3.active) {
       requestAnimationFrame((now) => {
+                if (AnimatedVec3.active) {
+                    this.camera.forceBuild();
+                }
         this.render(now);
       });
     }
@@ -586,7 +559,7 @@ export class Viewer {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
     gl.disable(gl.CULL_FACE);
 
-    this.sectionPlaneValues.set(this.sectionPlaneValues2);
+    this.sectionPlanes.tempRestore();
 
     for (var renderLayer of this.renderLayers) {
       renderLayer.prepareRender(reason);
@@ -600,19 +573,30 @@ export class Viewer {
         this.resetToDefaultView();
       }
 
-      if (!this.sectionPlaneIsDisabled) {
+      // On what side of the plane is the camera eye?
+            let planeIsVisbible = (p) => vec3.dot(p.values, this.camera.eye) > p.values[3];
+
+            if (this.sectionPlanes.planes.some(p => !p.isDisabled && planeIsVisbible(p))) {
+
+                // Fill depth buffer with quads
+                // ----------------------------
         gl.stencilMask(0xff);
-        this.quad2.position(this.modelBounds, this.sectionPlaneValues);
+
         gl.colorMask(false, false, false, false);
-        gl.disable(gl.CULL_FACE);
-        this.quad2.draw();
+// @todo simply draw quad twice with opposing windings so that we
+                // can remove the cull_face toggle here?        gl.disable(gl.CULL_FACE);
+        this.sectionPlanes.tempRestore();
+                this.sectionPlanes.planes.filter(sp => !sp.isDisabled).forEach(sp => sp.drawQuad());
+
+                // Draw scene twice without planes and without depth test
+                // ------------------------------------------------------
         gl.enable(gl.CULL_FACE);
         gl.depthMask(false);
 
         gl.enable(gl.STENCIL_TEST);
         gl.stencilFunc(gl.ALWAYS, 1, 0xff);
 
-        this.sectionPlaneValues.set(this.sectionPlaneValuesDisabled);
+        this.sectionPlanes.tempDisable();
 
         gl.stencilOp(gl.KEEP, gl.KEEP, gl.INCR); // increment on pass
         gl.cullFace(gl.BACK);
@@ -622,19 +606,32 @@ export class Viewer {
         gl.cullFace(gl.FRONT);
         this.internalRender(what, [false]);
 
-        this.sectionPlaneValues.set(this.sectionPlaneValues2);
-        const eyePlaneDist = this.lastSectionPlaneAdjustment = Math.abs(vec3.dot(this.camera.eye, this.sectionPlaneValues2) - this.sectionPlaneValues2[3]);
-        this.sectionPlaneValues[3] -= 1.e-3 * eyePlaneDist;
+        this.sectionPlanes.tempRestore();
+        // const eyePlaneDist = this.lastSectionPlaneAdjustment = Math.abs(vec3.dot(this.camera.eye, sp.values2) - sp.values2[3]);
+        // sp.values[3] -= 1.e-3 * eyePlaneDist;
+
+                // Renable color mask and draw planes with stencil
+                // -----------------------------------------------
 
         gl.stencilFunc(gl.EQUAL, 1, 0xff);
         gl.colorMask(true, true, true, true);
         gl.depthMask(true);
         gl.clear(gl.DEPTH_BUFFER_BIT);
         gl.disable(gl.CULL_FACE);
-        this.quad2.draw();
+        this.sectionPlanes.tempRestore();
+                for (var i = 0; i < this.sectionPlanes.planes.length; ++i) {
+                    // @todo planes pointing away from camera do not need to be rendered
+                    let sp = this.sectionPlanes.planes[i];
+                    if (!sp.isDisabled && planeIsVisbible(sp)) {
+                        sp.drawQuad();
+                    }
+                }
+
+                // Restore main render settings
+                // ----------------------------
         gl.enable(gl.CULL_FACE);
 
-        gl.cullFace(gl.BACK); // This is the end state for further rendering
+        gl.cullFace(gl.BACK);
         gl.disable(gl.STENCIL_TEST);
         gl.stencilFunc(gl.ALWAYS, 1, 0xff);
       }
@@ -670,7 +667,9 @@ export class Viewer {
     }
 
     // From now on section plane is disabled.
-    this.sectionPlaneValues.set(this.sectionPlaneValuesDisabled);
+    for (let sp of this.sectionPlanes.planes) {
+            sp.tempDisable();
+        }
 
     // Selection outlines require face culling to be disabled.
     gl.disable(gl.CULL_FACE);
@@ -737,53 +736,17 @@ export class Viewer {
   }
 
   removeSectionPlaneWidget() {
-    if (this.sectionplanePoly) {
-      this.sectionplanePoly.destroy();
-      this.sectionplanePoly = null;
+    for (let sp of this.sectionPlanes.planes) {
+      sp.destroy();
+      }
     }
-  }
+
+  sectionPlaneIndex = 0;
 
   positionSectionPlaneWidget(params) {
-    let p = this.pick({canvasPos: params.canvasPos, select: false});
+    if (this.sectionPlaneIndex < this.sectionPlanes.planes.length) {let p = this.pick({canvasPos: params.canvasPos, select: false});
     if (p.normal && p.coordinates) {
-      let ref = null;
-      if (Math.abs(vec3.dot(p.normal, Z)) < 0.9) {
-        ref = Z;
-      } else {
-        ref = X;
-      }
-      vec3.cross(this.tmp_sectionU, p.normal, ref);
-      vec3.cross(this.tmp_sectionV, p.normal, this.tmp_sectionU);
-      vec3.scale(this.tmp_sectionU, this.tmp_sectionU, 500.);
-      vec3.scale(this.tmp_sectionV, this.tmp_sectionV, 500.);
-
-      // ---
-
-      vec3.add(this.tmp_sectionA, this.tmp_sectionU, p.coordinates);
-      vec3.add(this.tmp_sectionB, this.tmp_sectionU, p.coordinates);
-
-      vec3.negate(this.tmp_sectionU, this.tmp_sectionU);
-
-      vec3.add(this.tmp_sectionC, this.tmp_sectionU, p.coordinates);
-      vec3.add(this.tmp_sectionD, this.tmp_sectionU, p.coordinates);
-
-      // ---
-
-      vec3.add(this.tmp_sectionA, this.tmp_sectionV, this.tmp_sectionA);
-      vec3.add(this.tmp_sectionC, this.tmp_sectionV, this.tmp_sectionC);
-
-      vec3.negate(this.tmp_sectionV, this.tmp_sectionV);
-
-      vec3.add(this.tmp_sectionB, this.tmp_sectionV, this.tmp_sectionB);
-      vec3.add(this.tmp_sectionD, this.tmp_sectionV, this.tmp_sectionD);
-
-      // ---
-
-      let ps = [this.tmp_sectionA, this.tmp_sectionB, this.tmp_sectionD, this.tmp_sectionC, this.tmp_sectionA];
-      if (this.sectionplanePoly) {
-        this.sectionplanePoly.points = ps;
-      } else {
-        this.sectionplanePoly = this.overlay.createWorldSpacePolyline(ps);
+      this.sectionPlanes.planes[this.sectionPlaneIndex].position(p.coordinates, p.normal);
       }
     }
   }
@@ -791,35 +754,26 @@ export class Viewer {
   enableSectionPlane(params) {
     let p = this.pick({canvasPos: params.canvasPos, select: false});
     if (p.normal && p.coordinates && p.depth) {
-      this.sectionPlaneValues.set(p.normal.subarray(0,3));
-      this.initialSectionPlaneD = this.sectionPlaneValues[3] = vec3.dot(p.coordinates, p.normal);
-      this.sectionPlaneValues2.set(this.sectionPlaneValues);
-      this.sectionPlaneIsDisabled = false;
-      this.sectionPlaneDepth = p.depth;
-      let cp = [params.canvasPos[0] / this.width, - params.canvasPos[1] / this.height];
-      this.sectionPlaneDownAt = cp;
-      this.dirty = 2;
+      if (this.sectionPlaneIndex < this.sectionPlanes.planes.length) {
+      this.sectionPlanes.planes[this.sectionPlaneIndex].enable(params.canvasPos, p.coordinates, p.normal, p.depth);
+      this.sectionPlaneIndex ++;
+      this.dirty = 2;}
       return true;
-    }
+    }else {
+            this.sectionPlanes.disable();
+            this.sectionPlaneIndex = 0;
     return false;
-  }
+  }}
 
   disableSectionPlane() {
-    this.sectionPlaneValues.set(this.sectionPlaneValuesDisabled);
-    this.sectionPlaneValues2.set(this.sectionPlaneValuesDisabled);
-    this.sectionPlaneIsDisabled = true;
+    this.sectionPlanes.planes[0].disable();
+
     this.dirty = 2;
   }
 
   moveSectionPlane(params) {
-    this.tmp_section_dir_2d.set(this.sectionPlaneValues2);
-    this.tmp_section_dir_2d[3] = 0.;
-    vec4.transformMat4(this.tmp_section_dir_2d, this.tmp_section_dir_2d, this.camera.viewProjMatrix);
-    let cp = [params.canvasPos[0] / this.width, - params.canvasPos[1] / this.height];
-    vec2.subtract(this.tmp_section_dir_2d.subarray(2), cp, this.sectionPlaneDownAt);
-    this.tmp_section_dir_2d[1] /= this.width / this.height;
-    let d = vec2.dot(this.tmp_section_dir_2d, this.tmp_section_dir_2d.subarray(2)) * this.sectionPlaneDepth;
-    this.sectionPlaneValues2[3] = this.initialSectionPlaneD + d;
+    this.sectionPlanes.planes[this.sectionPlaneIndex - 1].move(params.canvasPos);
+
     this.dirty = 2;
   }
 
@@ -833,16 +787,18 @@ export class Viewer {
   pick(params) { // Returns info on the object at the given canvas coordinates
     var canvasPos = params.canvasPos;
     if (!canvasPos) {
-      throw "param expected: canvasPos";
+      throw "param epected: canvasPos";
     }
+
+        this.sectionPlanes.tempRestore();
 
     // TODO when the navigation has not changed since the last picking action, we should probably be able to reuse the previously generated render target?
 
-    this.sectionPlaneValues.set(this.sectionPlaneValues2);
-    if (!this.sectionPlaneIsDisabled) {
+    /*
+    if (!this.sectionPlanes.planes[0].isDisabled) {
       // tfk: I forgot what this is.
-      this.sectionPlaneValues[3] -= 1.e-3 * this.lastSectionPlaneAdjustment;
-    }
+      this.sectionPlanes.planes[0].values[3] -= 1.e-3 * this.lastSectionPlaneAdjustment;
+    }*/
 
     this.pickBuffer.bind();
 
@@ -914,7 +870,9 @@ export class Viewer {
           }
         }
       }
-      return {object: viewObject, normal: normal, coordinates: this.tmp_unproject, depth: depth};
+      this.lastRecordedDepth = depth;
+            this.recordedDepthAt = +new Date();
+            console.log("recording depth at", depth);return {object: viewObject, normal: normal, coordinates: this.tmp_unproject, depth: depth};
     } else if (params.select !== false) {
       if (this.selectedElements.size > 0) {
         this.eventHandler.fire("selection_state_changed", this.selectedElements, false);
@@ -922,7 +880,8 @@ export class Viewer {
       }
     }
 
-    return {object: null, coordinates: this.tmp_unproject, depth: depth};
+    this.lastRecordedDepth = null;
+        this.recordedDepthAt = +new Date();return {object: null, coordinates: this.tmp_unproject, depth: depth};
   }
 
   addToSelection(uniqueId) {

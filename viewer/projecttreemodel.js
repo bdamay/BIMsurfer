@@ -15,7 +15,7 @@ export class ProjectTreeModel extends TreeModel{
 	}
 
 	load(clickFn) {
-		this.bimServerApi.call("ServiceInterface", "getAllProjects", {
+		return this.bimServerApi.call("ServiceInterface", "getAllProjects", {
 			onlyTopLevel: false,
 			onlyActive: true
 		}, (projects) => {
@@ -39,7 +39,7 @@ export class ProjectTreeModel extends TreeModel{
 			}
 		});
 	}
-	
+
 	addProject(parentNode, project, clickFn) {
 		if (project.lastRevisionId == -1 && project.subProjects.length == 0) {
 			return;

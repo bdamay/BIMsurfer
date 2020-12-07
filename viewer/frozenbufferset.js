@@ -9,20 +9,17 @@ export class FrozenBufferSet extends AbstractBufferSet {
     constructor(
     	viewer,
         originalBuffer,
-        positionBuffer, normalBuffer, colorBuffer, pickColorBuffer, indexBuffer, lineIndexBuffer,				
+        positionBuffer, normalBuffer, colorBuffer, pickColorBuffer, indexBuffer, lineIndexBuffer,
         color, colorHash,
         nrIndices, nrLineIndices, nrNormals, nrPositions, nrColors,
         vao, vaoPick, lineRenderVao,
-        hasTransparency, hasTwoSidedTriangles, reuse, owner, manager, 
+        hasTransparency, hasTwoSidedTriangles, reuse, owner, manager,
 
         // only in case of reuse
         roid, uniqueModelId)
     {
         super(viewer, true);
 
-        if (lineIndexBuffer == null) {
-        	debugger;
-        }
         if (originalBuffer) {
         	this.uniqueIdToIndex = originalBuffer.uniqueIdToIndex;
         	this.uniqueIdSet = originalBuffer.uniqueIdSet;
@@ -56,7 +53,7 @@ export class FrozenBufferSet extends AbstractBufferSet {
         this.reuse = reuse;
         this.owner = owner;
         this.manager = manager;
-        
+
         this.roid = roid;
         this.uniqueModelId = uniqueModelId;
         this.indexType = indexBuffer.attrib_type;
@@ -65,7 +62,7 @@ export class FrozenBufferSet extends AbstractBufferSet {
         this.instanceNormalMatricesBuffer = null;
         this.instancePickColorsBuffer = null;
     }
-    
+
     update(nrIndices, nrPositions, nrNormals, nrColors) {
         this.nrIndices = nrIndices;
         this.nrNormals = nrNormals;
@@ -75,14 +72,14 @@ export class FrozenBufferSet extends AbstractBufferSet {
     }
 
     finalize() {
-    	
+
     }
-    
+
     // Sets reuse instances
     setObjects(gl, objects) {
         this.objects = objects;
         this.reuse = true;
-        
+
         const N = this.nrProcessedMatrices = objects.length;
 
         var instanceMatrices = new Float32Array(N * 16);
@@ -95,7 +92,7 @@ export class FrozenBufferSet extends AbstractBufferSet {
         	instanceNormalMatrices.set(object.normalMatrix, index * 9);
         	instancePickColors.set(this.viewer.getPickColor(object.uniqueId), index * 4);
         }
-        
+
         if (this.instanceMatricesBuffer === null) {
             this.instanceMatricesBuffer = Utils.createBuffer(gl, instanceMatrices, null, null, 16);
             this.instanceNormalMatricesBuffer = Utils.createBuffer(gl, instanceNormalMatrices, null, null, 9);
@@ -107,7 +104,7 @@ export class FrozenBufferSet extends AbstractBufferSet {
             arrays.forEach(function(a, idx) {
                 let b = buffers[idx];
                 gl.bindBuffer(gl.ARRAY_BUFFER, b);
-                gl.bufferData(gl.ARRAY_BUFFER, a, gl.STATIC_DRAW, 0);             
+                gl.bufferData(gl.ARRAY_BUFFER, a, gl.STATIC_DRAW, 0);
             });
             gl.bindBuffer(gl.ARRAY_BUFFER, restoreArrayBinding);
         }
@@ -201,7 +198,7 @@ export class FrozenBufferSet extends AbstractBufferSet {
         // Line render drawing VAO
         var lineRenderVao = this.lineRenderVao = gl.createVertexArray();
         gl.bindVertexArray(lineRenderVao);
-        
+
         locations = [
             [lineProgramInfo.attribLocations.vertexPosition, this.positionBuffer]
         ];
@@ -228,7 +225,7 @@ export class FrozenBufferSet extends AbstractBufferSet {
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.lineIndexBuffer);
         gl.bindVertexArray(null);
-        
+
         // Picking VAO
         var vaoPick = this.vaoPick = gl.createVertexArray();
         gl.bindVertexArray(vaoPick);
