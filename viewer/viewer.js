@@ -148,6 +148,9 @@ export class Viewer {
 
     this.eventHandler = new EventHandler();
 
+
+		this.sectionPlaneIndex = 0;
+
     if ("OffscreenCanvas" in window && canvas instanceof OffscreenCanvas) {
     } else {
       // Tabindex required to be able add a keypress listener to canvas
