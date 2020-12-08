@@ -29,8 +29,44 @@ export class CameraControl {
         this.lastX = 0; // Last canvas pos while dragging
         this.lastY = 0;
 
+		this.keysDown = new Map();
+		this.keyMapping = {
+		    "ArrowRight": "x_neg",
+		    "ArrowLeft": "x_pos",
+		    "ArrowUp": "z_neg",
+		    "ArrowDown": "z_pos",
+		    "PageUp": "y_pos",
+		    "PageDown": "y_neg",
+		    "w": "z_neg",
+		    "a": "x_pos",
+		    "s": "z_pos",
+		    "d": "x_neg",
+		    "q": "y_pos",
+		    "z": "y_neg"
+		};
+		
+		this.axoKeyMapping = {
+		    "1": "z_pos",
+		    "2": "z_neg",
+		    "3": "x_pos",
+		    "4": "x_neg",
+		    "5": "y_pos",
+		    "6": "y_neg",
+		}
+
         this.mouseDown = false;
         this.dragMode = DRAG_ORBIT;
+
+	    this._tmp_topleftfront_0 = vec3.create();
+	    this._tmp_topleftfront_1 = vec3.create();
+	    this._tmp_topleftfront_current_dir = vec3.create();
+	    this._tmp_topleftfront_new_dir = vec3.create();
+	    this._tmp_topleftfront_a = vec3.create();
+	    this._tmp_topleftfront_b = vec3.create();
+	    this._tmp_topleftfront_c = vec3.create();
+	    this._tmp_topleftfront_d = vec4.create();
+	    this._tmp_topleftfront_e = mat4.create();
+	    this._tmp_topleftfront_f = vec3.create();
 
         this.canvas.oncontextmenu = (e) => {
             e.preventDefault();
@@ -52,12 +88,12 @@ export class CameraControl {
         this.documentKeyUpHandler = (e) => {
         	this.documentKeyProcess(e, false);
         };
-        document.addEventListener("keyup", this.documentKeyUpHandler);
+        //document.addEventListener("keyup", this.documentKeyUpHandler);
 
         this.documentKeyDownHandler = (e) => {
         	this.documentKeyProcess(e, true);
         };
-        document.addEventListener("keydown", this.documentKeyDownHandler);
+        //document.addEventListener("keydown", this.documentKeyDownHandler);
 
         this.canvas.addEventListener("mouseenter", this.canvasMouseEnterHandler = (e) => {
             this.over = true;
@@ -282,31 +318,6 @@ export class CameraControl {
         e.preventDefault();
     }
 
-    keysDown = new Map();
-    keyMapping = {
-        "ArrowRight": "x_neg",
-        "ArrowLeft": "x_pos",
-        "ArrowUp": "z_neg",
-        "ArrowDown": "z_pos",
-        "PageUp": "y_pos",
-        "PageDown": "y_neg",
-        "w": "z_neg",
-        "a": "x_pos",
-        "s": "z_pos",
-        "d": "x_neg",
-        "q": "y_pos",
-        "z": "y_neg"
-    };
-
-    axoKeyMapping = {
-        "1": "z_pos",
-        "2": "z_neg",
-        "3": "x_pos",
-        "4": "x_neg",
-        "5": "y_pos",
-        "6": "y_neg",
-    }
-
     keyTick() {
         let f;
         if (this.keysDown.size) {
@@ -325,17 +336,6 @@ export class CameraControl {
         }
     }
 
-    _tmp_topleftfront_0 = vec3.create();
-    _tmp_topleftfront_1 = vec3.create();
-    _tmp_topleftfront_current_dir = vec3.create();
-    _tmp_topleftfront_new_dir = vec3.create();
-    _tmp_topleftfront_a = vec3.create();
-    _tmp_topleftfront_b = vec3.create();
-    _tmp_topleftfront_c = vec3.create();
-    _tmp_topleftfront_d = vec4.create();
-    _tmp_topleftfront_e = mat4.create();
-    _tmp_topleftfront_f = vec3.create();
-    
     documentKeyProcess(e, state) {
         let axo = this.axoKeyMapping[e.key];
         if (axo && state == false) {

@@ -2,18 +2,19 @@ import * as vec3 from "./glmatrix/vec3.js";
 
 // @todo don't rely on Date, but on the timer from requestanimationframe
 
-export class AnimatedVec3 {
-    static active = 0;
+var ACTIVE_ANIMATIONS = 0;
 
-    a = vec3.create();
-    b = vec3.create();
-    c = vec3.create();
-    tmp = vec3.create();
-    t0 = 0;
-    t1 = 1; 
-    t2 = 2;
+export class AnimatedVec3 {
 
     constructor(x, y, z) {
+	    this.a = vec3.create();
+	    this.b = vec3.create();
+	    this.c = vec3.create();
+	    this.tmp = vec3.create();
+	    this.t0 = 0;
+	    this.t1 = 1; 
+	    this.t2 = 2;
+
         this.a.set([x, y, z]);
     }
 
@@ -45,7 +46,7 @@ export class AnimatedVec3 {
                 } else {
                     this.a.set(this.tmp);
                     this.t0 = 0;
-                    AnimatedVec3.active --;
+                    ACTIVE_ANIMATIONS--;
                 }
             }
             return this.tmp;
@@ -68,6 +69,6 @@ export class AnimatedVec3 {
         if (dt2) {
             this.t2 = this.t1 + dt2;
         }
-        AnimatedVec3.active ++;
+        ACTIVE_ANIMATIONS++;
     }
 }

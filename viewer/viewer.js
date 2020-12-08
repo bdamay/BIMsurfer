@@ -189,6 +189,10 @@ export class Viewer {
         });
       }
     }
+
+            // These parameters are used for camera control sensitivity
+        this.lastRecordedDepth = null;
+        this.recordedDepthAt = 0;
   } // end of constructor
 
     set dirty(dirty) {
@@ -723,17 +727,17 @@ export class Viewer {
     }
 
     resetToDefaultView(modelBounds=this.modelBounds) {
-      this.camera.target = [0, 0, 0];
-      this.camera.eye = [1, -1, 1]; // [0, 1, 0];
-      this.camera.up = [0, 0, 1];
-      this.camera.worldAxis = [ // Set the +Z axis as World "up"
-        1, 0, 0, // Right
-        0, 0, 1, // Up
-        0, -1, 0  // Forward
-      ];
-      this.camera.viewFit(modelBounds); // Position camera so that entire model bounds are in view
-      this.cameraSet = true;
-      this.camera.forceBuild();
+        this.camera.target = [0, 0, 0];
+        this.camera.eye = [0, -1, 0];
+        this.camera.up = [0, 0, 1];
+        this.camera.worldAxis = [ // Set the +Z axis as World "up"
+            1, 0, 0, // Right
+            0, 0, 1, // Up
+            0, -1, 0  // Forward
+        ];
+        this.camera.viewFit(modelBounds); // Position camera so that entire model bounds are in view
+        this.cameraSet = true;
+        this.camera.forceBuild();
     }
 
     removeSectionPlaneWidget() {
@@ -741,8 +745,6 @@ export class Viewer {
         sp.destroy();
       }
     }
-
-    sectionPlaneIndex = 0;
 
     positionSectionPlaneWidget(params) {
       if (this.sectionPlaneIndex < this.sectionPlanes.planes.length) {let p = this.pick({canvasPos: params.canvasPos, select: false});
@@ -958,24 +960,28 @@ export class Viewer {
       this.viewObjectsByType.set(viewObject.type, byType);
     }
 
+	getAabbFor(ids) {
+		return ids.map(this.viewObjects.get.bind(this.viewObjects))
+			.filter((o) => o != null && o.globalizedAabb != null)
+			.map((o) => o.globalizedAabb)
+	        .reduce(Utils.unionAabb, Utils.emptyAabb());
+	}
+
     viewFit(ids) {
-      if (ids.length == 0) {
-        return Promise.resolve();
-      }
-      return new Promise((resolve, reject) => {
-        let aabb = ids.map(this.viewObjects.get.bind(this.viewObjects))
-          .filter((o) => o != null && o.globalizedAabb != null)
-          .map((o) => o.globalizedAabb)
-          .reduce(Utils.unionAabb, Utils.emptyAabb());
-        if (Utils.isEmptyAabb(aabb)) {
-          console.error("No AABB for objects", ids);
-          reject();
-        } else {
-          this.camera.viewFit(aabb);
-          this.dirty = 2;
-          resolve();
-        }
-      });
+    	if (ids.length == 0) {
+    		return Promise.resolve();
+    	}
+    	return new Promise((resolve, reject) => {
+			const aabb = this.getAabbFor(ids);
+            if (Utils.isEmptyAabb(aabb)) {
+                console.error("No AABB for objects", ids);
+                reject();
+            } else {
+                this.camera.viewFit(aabb);
+                this.dirty = 2;
+                resolve();
+            }
+    	});
     }
 
     resetCamera() {
