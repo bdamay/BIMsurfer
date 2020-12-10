@@ -85,15 +85,15 @@ export class CameraControl {
         };
         document.addEventListener("mouseup", this.documentMouseUpHandler);
 
-        this.documentKeyUpHandler = (e) => {
-        	this.documentKeyProcess(e, false);
+        this.canvasKeyUpHandler = (e) => {
+        	this.canvasKeyProcess(e, false);
         };
-        //document.addEventListener("keyup", this.documentKeyUpHandler);
+ 		this.canvas.addEventListener("keyup", this.canvasKeyUpHandler);
 
-        this.documentKeyDownHandler = (e) => {
-        	this.documentKeyProcess(e, true);
+        this.canvasKeyDownHandler = (e) => {
+        	this.canvasKeyProcess(e, true);
         };
-        //document.addEventListener("keydown", this.documentKeyDownHandler);
+        this.canvas.addEventListener("keydown", this.canvasKeyDownHandler);
 
         this.canvas.addEventListener("mouseenter", this.canvasMouseEnterHandler = (e) => {
             this.over = true;
@@ -138,7 +138,7 @@ export class CameraControl {
             canvasPos[1] = event.y;
         } else {
             let pageX = null, pageY = null;
-            if (event instanceof TouchEvent) {
+            if (window.TouchEvent && event instanceof TouchEvent) {
                 if (event.touches.length == 0) {
                     return;
                 }
@@ -245,7 +245,7 @@ export class CameraControl {
             this.dragMode = DRAG_PAN;
         }
 
-        if (e instanceof TouchEvent) {
+        if (window.TouchEvent && e instanceof TouchEvent) {
             if (e.touches.length == 1) {
                 handleOrbit();
             } else if (e.touches.length == 2) {
@@ -296,7 +296,7 @@ export class CameraControl {
             }
         }
 
-        if ((e instanceof TouchEvent && this.dragMode == DRAG_ORBIT) || (e instanceof MouseEvent && e.which == 1)) {
+        if ((window.TouchEvent && e instanceof TouchEvent && this.dragMode == DRAG_ORBIT) || (e instanceof MouseEvent && e.which == 1)) {
             handleClick();
         }
 
@@ -336,7 +336,7 @@ export class CameraControl {
         }
     }
 
-    documentKeyProcess(e, state) {
+    canvasKeyProcess(e, state) {
         let axo = this.axoKeyMapping[e.key];
         if (axo && state == false) {
             this._tmp_topleftfront_0[0] = this._tmp_topleftfront_1[0] = (this.viewer.modelBounds[0] + this.viewer.modelBounds[3]) / 2;
@@ -476,7 +476,7 @@ export class CameraControl {
                     // elapsed /= 20.;
 
                     let dist = this.getEyeLookDist();
-                    if (e instanceof TouchEvent && e.touches.length == 2) {
+                    if (window.TouchEvent && e instanceof TouchEvent && e.touches.length == 2) {
                         let factor = Math.pow(this.pinchDistance / this.lastPinchDistance, 0.5);
                         this.camera.zoom(dist - dist * factor, this.mousePos);
                         this.lastPinchDistance = this.pinchDistance;
@@ -526,8 +526,8 @@ export class CameraControl {
         canvas.removeEventListener("mousedown", this.canvasMouseDownHandler);
         canvas.removeEventListener("mouseup", this.canvasMouseUpHandler);
         document.removeEventListener("mouseup", this.documentMouseUpHandler);
-        document.removeEventListener("keyup", this.documentKeyUpHandler);
-        document.removeEventListener("keydown", this.documentKeyUpHandler);
+        canvas.removeEventListener("keyup", this.canvasKeyUpHandler);
+        canvas.removeEventListener("keydown", this.canvastKeyDownHandler);
         canvas.removeEventListener("mouseenter", this.canvasMouseEnterHandler);
         canvas.removeEventListener("mouseleave", this.canvasMouseLeaveHandler);
         canvas.removeEventListener("mousemove", this.canvasMouseMoveHandler);

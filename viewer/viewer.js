@@ -31,7 +31,7 @@ const OVERRIDE_FLAG = (1 << 30);
 
 /**
  * The idea is that this class doesn't know anything about BIMserver, and can possibly be reused in classes other than BimServerViewer
- *
+ * 
  *
  * Main viewer class, too many responsibilities:
  * - Keep track of width/height of viewport
@@ -44,26 +44,26 @@ const OVERRIDE_FLAG = (1 << 30);
 
 export class Viewer {
 
-  constructor(canvas, settings, stats, width, height) {
-    this.width = width;
-    this.height = height;
+    constructor(canvas, settings, stats, width, height) {
+        this.width = width;
+        this.height = height;
 
-    this.defaultColors = settings.defaultColors ? settings.defaultColors : DefaultColors;
+        this.defaultColors = settings.defaultColors ? settings.defaultColors : DefaultColors;
+        
+        this.stats = stats;
+        this.settings = settings;
+        this.canvas = canvas;
+        this.camera = new Camera(this);
+        if (settings.useOverlay) {
+        	this.overlay = new SvgOverlay(this.canvas, this.camera);
+        }
+        
+        this.gl = this.canvas.getContext('webgl2', {stencil: true, premultipliedAlpha: false, preserveDrawingBuffer: true});
 
-    this.stats = stats;
-    this.settings = settings;
-    this.canvas = canvas;
-    this.camera = new Camera(this);
-    if (settings.useOverlay) {
-      this.overlay = new SvgOverlay(this.canvas, this.camera);
-    }
-
-    this.gl = this.canvas.getContext('webgl2', {stencil: true, premultipliedAlpha: false, preserveDrawingBuffer: true});
-
-    if (!this.gl) {
-      alert('Unable to initialize WebGL. Your browser or machine may not support it.');
-      return;
-    }
+        if (!this.gl) {
+            alert('Unable to initialize WebGL. Your browser or machine may not support it.');
+            return;
+        }
 
     if (!this.settings.loaderSettings.prepareBuffers || (this.settings.tilingLayerEnabled && this.settings.loaderSettings.tilingLayerReuse)) {
       this.bufferSetPool = new BufferSetPool(1000, this.stats);
@@ -140,15 +140,14 @@ export class Viewer {
 
     this.useOrderIndependentTransparency = this.settings.realtimeSettings.orderIndependentTransparency;
 
-    // 0 -> Not dirty, 1 -> Kinda dirty, but rate-limit the repaints to 2/sec, 2 -> Really dirty, repaint ASAP
-    this._dirty = 0;
-    this.lastRepaint = 0;
-
+        // 0 -> Not dirty, 1 -> Kinda dirty, but rate-limit the repaints to 2/sec, 2 -> Really dirty, repaint ASAP
+        this._dirty = 0; 
+        this.lastRepaint = 0;
+        
 //        window._debugViewer = this;  // HACK for console debugging
 
-    this.eventHandler = new EventHandler();
-
-
+        this.eventHandler = new EventHandler();
+        
 		this.sectionPlaneIndex = 0;
 
     if ("OffscreenCanvas" in window && canvas instanceof OffscreenCanvas) {
@@ -193,31 +192,31 @@ export class Viewer {
       }
     }
 
-            // These parameters are used for camera control sensitivity
+        // These parameters are used for camera control sensitivity
         this.lastRecordedDepth = null;
         this.recordedDepthAt = 0;
-  } // end of constructor
-
-    set dirty(dirty) {
-      this._dirty = dirty;
     }
-
+    
+    set dirty(dirty) {
+    	this._dirty = dirty;
+    }
+    
     get dirty() {
-      return this._dirty;
+    	return this._dirty;
     }
 
     callByType(method, types, ...args) {
-      let elems = types.map((i) => this.viewObjectsByType.get(i) || [])
-        .reduce((a, b) => a.concat(b), [])
-        .map((o) => o.oid);
-      // Assuming all passed methods return a promise
-      return method.call(this, elems, ...args);
+        let elems = types.map((i) => this.viewObjectsByType.get(i) || [])
+            .reduce((a, b) => a.concat(b), [])
+            .map((o) => o.oid);
+        // Assuming all passed methods return a promise
+        return method.call(this, elems, ...args);
     }
 
     setVisibility(elems, visible, sort=true, fireEvent=true) {
-      elems = Array.from(elems);
-      // @todo. until is properly asserted, documented somewhere, it's probably best to explicitly sort() for now.
-      elems.sort(this.uniqueIdCompareFunction);
+        elems = Array.from(elems);
+        // @todo. until is properly asserted, documented somewhere, it's probably best to explicitly sort() for now.
+        elems.sort(this.uniqueIdCompareFunction);
 
       let fn = (visible ? this.invisibleElements.delete : this.invisibleElements.add).bind(this.invisibleElements);
       let fn2 = this.idAugmentationFunction;
@@ -862,29 +861,30 @@ export class Viewer {
               this.eventHandler.fire("selection_state_set", new Set([uniqueId]), true);
               triggered = true;
 //                		this.eventHandler.fire("selection_state_changed", this.selectedElements, false);
-              this.selectedElements.clear();
-              this.addToSelection(uniqueId);
+                		this.selectedElements.clear();
+                		this.addToSelection(uniqueId);
+                	}
+                }
+                if (!triggered) {
+                	if (this.selectedElements.has(uniqueId) && !params.onlyAdd) {
+                		this.selectedElements.delete(uniqueId);
+                		this.eventHandler.fire("selection_state_changed", [uniqueId], false);
+                	} else {
+                		this.addToSelection(uniqueId);
+                		this.eventHandler.fire("selection_state_changed", [uniqueId], true);
+                	}
+                }
             }
-          }
-          if (!triggered) {
-            if (this.selectedElements.has(uniqueId) && !params.onlyAdd) {
-              this.selectedElements.delete(uniqueId);
-              this.eventHandler.fire("selection_state_changed", [uniqueId], false);
-            } else {
-              this.addToSelection(uniqueId);
-              this.eventHandler.fire("selection_state_changed", [uniqueId], true);
-            }
-          }
+            this.lastRecordedDepth = depth;
+            this.recordedDepthAt = +new Date();
+//            console.log("recording depth at", depth);
+            return {object: viewObject, normal: normal, coordinates: this.tmp_unproject, depth: depth};
+        } else if (params.select !== false) {
+        	if (this.selectedElements.size > 0) {
+        		this.eventHandler.fire("selection_state_changed", this.selectedElements, false);
+        		this.selectedElements.clear();
+        	}
         }
-        this.lastRecordedDepth = depth;
-        this.recordedDepthAt = +new Date();
-        console.log("recording depth at", depth);return {object: viewObject, normal: normal, coordinates: this.tmp_unproject, depth: depth};
-      } else if (params.select !== false) {
-        if (this.selectedElements.size > 0) {
-          this.eventHandler.fire("selection_state_changed", this.selectedElements, false);
-          this.selectedElements.clear();
-        }
-      }
 
       this.lastRecordedDepth = null;
       this.recordedDepthAt = +new Date();return {object: null, coordinates: this.tmp_unproject, depth: depth};
