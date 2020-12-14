@@ -1,6 +1,7 @@
 import * as mat4 from "./glmatrix/mat4.js";
 import * as mat3 from "./glmatrix/mat3.js";
 import * as vec3 from "./glmatrix/vec3.js";
+import * as vec4 from "./glmatrix/vec4.js";
 
 import {AnimatedVec3} from "./animatedvec3.js";
 import {Perspective} from "./perspective.js";
@@ -67,6 +68,18 @@ export class Camera {
         this._orbitting = false;
 
         this.autonear = true;
+
+        this._tmp_interpolate_current_dir = vec3.create();
+	    this._tmp_interpolate_new_dir = vec3.create();
+	    this._tmp_interpolate_a = vec3.create();
+	    this._tmp_interpolate_b = vec3.create();
+	    this._tmp_interpolate_c = vec3.create();
+	    this._tmp_interpolate_d = vec4.create();
+	    this._tmp_interpolate_e = mat4.create();
+        this._tmp_interpolate_f = vec3.create();
+        
+        this._tmp_eye = vec3.create();
+        this._tmp_target = vec3.create();
     }
 
     lock() {
@@ -659,18 +672,92 @@ export class Camera {
         this._setDirty();
     }
 
+    interpolateView(newEye, newTarget) {
+        this._eye.deanimate();
+        this._target.deanimate();
+
+        vec3.sub(this._tmp_interpolate_current_dir, this._target.get(), this._eye.get());
+        vec3.normalize(this._tmp_interpolate_current_dir, this._tmp_interpolate_current_dir);
+
+        vec3.sub(this._tmp_interpolate_new_dir, newTarget, newEye);
+        vec3.normalize(this._tmp_interpolate_new_dir, this._tmp_interpolate_new_dir);
+
+        let d = vec3.dot(this._tmp_interpolate_current_dir, this._tmp_interpolate_new_dir);
+
+        if (d > 0.5) {          
+            // More or less pointing in the same direction
+
+            this._eye.b.set(newEye);
+            this._target.b.set(newTarget);
+            this._eye.animate(1000);
+            this._target.animate(1000);
+        } else {
+            // Add an additional intermediate interpolation point
+            // Add a point on the bisectrice of d1 d2
+
+            let an = Math.acos(d);
+            let d1 = vec3.subtract(this._tmp_interpolate_a, newEye, newTarget);
+            let d2 = vec3.subtract(this._tmp_interpolate_b, this.eye, newTarget);
+            let l1 = vec3.len(d1);
+            let l2 = vec3.len(d2);
+            vec3.normalize(d1, d1);
+            vec3.normalize(d2, d2);
+
+            let d3;
+            if (d < -0.99) {
+                // parallel view vecs, choose arbitrary axis
+                let temp;
+                if (Math.abs(d1[1]) > 0.99) {
+                    temp = vec3.fromValues(1,0,0);
+                } else {
+                    temp = vec3.fromValues(0,1,0);
+                }
+                d3 = vec3.cross(this._tmp_interpolate_c, d1, temp);
+            } else {
+                d3 = vec3.cross(this._tmp_interpolate_c, d1, d2);
+            }
+            vec3.normalize(d3, d3);
+            let rot = mat4.fromRotation(this._tmp_interpolate_e, an / 2., d3);
+            let intermediate = this._tmp_interpolate_d;
+            vec3.copy(intermediate, d1);
+            vec4.transformMat4(intermediate, intermediate, rot);
+            vec3.normalize(intermediate, intermediate);
+            vec3.scale(intermediate, intermediate, (l1 + l2) / 2.);
+            vec3.add(intermediate, intermediate, newTarget);
+            let intermediate3 = intermediate.subarray(0,3);
+            
+            this._eye.b.set(intermediate3);
+            this._target.b.set(vec3.lerp(this._tmp_interpolate_f, this.target, newTarget, 0.5));
+            this._eye.c.set(newEye);
+            this._target.c.set(newTarget);
+            this._eye.animate(500, 500);
+            this._target.animate(500, 500);
+        }
+    }
+
     /**
      Jumps the camera to look at the given axis-aligned World-space bounding box.
 
      @param {Float32Array} aabb The axis-aligned World-space bounding box (AABB).
      @param {Number} fitFOV Field-of-view occupied by the AABB when the camera has fitted it to view.
      */
-    viewFit(aabb, fitFOV) {
-        let eye = this._eye.get();
-        let target = this._target.get();
+    viewFit(params) {
 
-        aabb = aabb || this.viewer.modelBounds;
-        fitFOV = fitFOV || this.perspective.fov;
+        let eye, target, eye2, target2;
+        
+        if (params.animate) {
+            eye = this._eye.get();
+            target = this._target.get();
+
+            eye2 = this._tmp_eye;
+            target2 = this._tmp_target;
+        } else {
+            eye2 = eye = this._eye.get();
+            target2 = target = this._target.get();
+        }
+
+        const aabb = params.aabb || this.viewer.modelBounds;
+        const fitFOV = this.perspective.fov;
         var eyeToTarget = vec3.normalize(this.tempVec3b, vec3.subtract(this.tempVec3, eye, target));
         var diagonal = Math.sqrt(
             Math.pow(aabb[3] - aabb[0], 2) +
@@ -681,11 +768,15 @@ export class Camera {
             (aabb[4] + aabb[1]) / 2,
             (aabb[5] + aabb[2]) / 2
         ];
-        target.set(center);
+        target2.set(center);
         var sca = Math.abs(diagonal / Math.tan(fitFOV * 0.0174532925));
-        eye[0] = target[0] + (eyeToTarget[0] * sca);
-        eye[1] = target[1] + (eyeToTarget[1] * sca);
-        eye[2] = target[2] + (eyeToTarget[2] * sca);
+        eye2[0] = target2[0] + (eyeToTarget[0] * sca);
+        eye2[1] = target2[1] + (eyeToTarget[1] * sca);
+        eye2[2] = target2[2] + (eyeToTarget[2] * sca);
+
+        if (params.animate) {
+            this.interpolateView(this._tmp_eye, this._tmp_target);
+        }
 
         this._setDirty();
     }
