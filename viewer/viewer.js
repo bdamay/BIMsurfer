@@ -32,7 +32,7 @@ const OVERRIDE_FLAG = (1 << 30);
 
 /**
  * The idea is that this class doesn't know anything about BIMserver, and can possibly be reused in classes other than BimServerViewer
- * 
+ *
  *
  * Main viewer class, too many responsibilities:
  * - Keep track of width/height of viewport
@@ -50,7 +50,7 @@ export class Viewer {
         this.height = height;
 
         this.defaultColors = settings.defaultColors ? settings.defaultColors : DefaultColors;
-        
+
         this.stats = stats;
         this.settings = settings;
         this.canvas = canvas;
@@ -58,7 +58,7 @@ export class Viewer {
         if (settings.useOverlay) {
         	this.overlay = new SvgOverlay(this.canvas, this.camera);
         }
-        
+
         this.gl = this.canvas.getContext('webgl2', {stencil: true, premultipliedAlpha: false, preserveDrawingBuffer: true});
 
         if (!this.gl) {
@@ -73,7 +73,7 @@ export class Viewer {
         }
 
         this.tmp_unproject = vec3.create();
-        
+
         this.pickIdCounter = 1;
 
     // Picking ID (unsigned int) -> ViewObject
@@ -144,13 +144,13 @@ export class Viewer {
     this.useOrderIndependentTransparency = this.settings.realtimeSettings.orderIndependentTransparency;
 
         // 0 -> Not dirty, 1 -> Kinda dirty, but rate-limit the repaints to 2/sec, 2 -> Really dirty, repaint ASAP
-        this._dirty = 0; 
+        this._dirty = 0;
         this.lastRepaint = 0;
-        
+
 //        window._debugViewer = this;  // HACK for console debugging
 
         this.eventHandler = new EventHandler();
-        
+
 		this.sectionPlaneIndex = 0;
 
     if ("OffscreenCanvas" in window && canvas instanceof OffscreenCanvas) {
@@ -199,11 +199,11 @@ export class Viewer {
         this.lastRecordedDepth = null;
         this.recordedDepthAt = 0;
     }
-    
+
     set dirty(dirty) {
     	this._dirty = dirty;
     }
-    
+
     get dirty() {
     	return this._dirty;
     }
@@ -731,16 +731,16 @@ export class Viewer {
 //		);
     }
 
-    resetToDefaultView(modelBounds=this.modelBounds) {
-        this.camera.target = [0, 0, 0];
-        this.camera.eye = [0, -1, 0];
+    resetToDefaultView(modelBounds=this.modelBounds, animate=false) {
+//        this.camera.target = [0, 0, 0];
+//        this.camera.eye = [0, -1, 0];
         this.camera.up = [0, 0, 1];
         this.camera.worldAxis = [ // Set the +Z axis as World "up"
             1, 0, 0, // Right
             0, 0, 1, // Up
             0, -1, 0  // Forward
         ];
-        this.camera.viewFit({aabb: modelBounds}); // Position camera so that entire model bounds are in view
+        this.camera.viewFit({aabb: modelBounds, viewDirection: [0, -1, 0], animate: animate}); // Position camera so that entire model bounds are in view
         this.cameraSet = true;
         this.camera.forceBuild();
     }
@@ -973,7 +973,7 @@ export class Viewer {
 	        .reduce(Utils.unionAabb, Utils.emptyAabb());
 	}
 
-    viewFit(ids) {
+    viewFit(ids, settings) {
     	if (ids.length == 0) {
     		return Promise.resolve();
     	}
@@ -983,7 +983,11 @@ export class Viewer {
                 console.error("No AABB for objects", ids);
                 reject();
             } else {
-                this.camera.viewFit({aabb: aabb});
+				if (!settings) {
+					settings = {};
+				}
+				settings.aabb = aabb;
+                this.camera.viewFit(settings);
                 this.dirty = 2;
                 resolve();
             }
