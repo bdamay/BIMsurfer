@@ -82,7 +82,7 @@ export class RenderLayer {
 		return geometry;
 	}
 
-	createObject(loaderId, roid, uniqueId, geometryIds, matrix, normalMatrix, scaleMatrix, hasTransparency, type, aabb, gpuBufferManager, node) {
+	createObject(loaderId, roid, uniqueId, geometryIds, matrix, normalMatrix, scaleMatrix, hasTransparency, type, aabb, gpuBufferManager, node, quantFromAabb) {
 		var loader = this.getLoader(loaderId);
 		var object = {
 			uniqueId: uniqueId,
@@ -118,7 +118,7 @@ export class RenderLayer {
 		this.viewer.addViewObject(uniqueId, viewObject);
 
 		geometryIds.forEach((id) => {
-			this.addGeometryToObject(id, object.uniqueId, loader, gpuBufferManager);
+			this.addGeometryToObject(id, object.uniqueId, loader, gpuBufferManager, quantFromAabb);
 		});
 
 		this.viewer.stats.inc("Models", "Objects");
@@ -126,11 +126,35 @@ export class RenderLayer {
 		return object;
 	}
 
-	addGeometry(loaderId, geometry, object, buffer, sizes) {
+	addGeometry(loaderId, geometry, object, buffer, sizes, quantFromAabb) {
 		var loaderQuantizeNormals = this.settings.loaderSettings.quantizeNormals;
 		var quantizeNormals = this.settings.quantizeNormals;
 
 		var startIndex = buffer.positionsIndex / 3;
+
+		let QM = this.viewer.vertexQuantization.vertexQuantizationMatrix;
+		let IQM = this.viewer.vertexQuantization.inverseVertexQuantizationMatrixWithGlobalTranslation;
+
+		if (quantFromAabb) {
+			// @todo not really from AABB (because we want to limit the amount of quantization matrices),
+			// but maybe come up with something more robust than this.
+			let QM2 = mat4.create();
+			QM2[ 0] = 0.01;
+			QM2[ 5] = 0.01;
+			QM2[10] = 0.01;
+			QM2[12] = 0.01 * QM[12] / QM[0];
+			QM2[13] = 0.01 * QM[13] / QM[5];
+			QM2[14] = 0.01 * QM[14] / QM[10];
+			QM2[15] = 1.0;
+			QM = QM2;
+
+			IQM = mat4.identity(mat4.create());
+			IQM[0] *= 100.;
+			IQM[5] *= 100.;
+			IQM[10] *= 100.;
+		}
+
+		buffer.unquantizationMatrix = IQM;
 
 		try {
 			var vertex = vec3.create();
@@ -139,9 +163,9 @@ export class RenderLayer {
 				// we need to un-quantize the vertices, transform them, then quantize them again (so the shaders can again unquantize them).
 				// This because order does matter (object transformation sometimes even mirror stuff)
 				// Obviously quantization slows down both CPU (only initially) and GPU (all the time)
-				vertex[0] = geometry.positions[i + 0];
-				vertex[1] = geometry.positions[i + 1];
-				vertex[2] = geometry.positions[i + 2];
+				vertex[0] = geometry.positions[i + 0] * 1000.;
+				vertex[1] = geometry.positions[i + 1] * 1000.;
+				vertex[2] = geometry.positions[i + 2] * 1000.;
 
 				// If the geometry loader loads quantized data we need to unquantize first
 				// TODO there is a possible performance improvement possible for all modelset where the totalBounds of the modelSet are the same as for each individual submodel (for example all projects without subprojects).
@@ -152,7 +176,7 @@ export class RenderLayer {
 				}
 				vec3.transformMat4(vertex, vertex, object.matrix);
 				if (this.settings.quantizeVertices) {
-					vec3.transformMat4(vertex, vertex, this.viewer.vertexQuantization.vertexQuantizationMatrixWithGlobalTranslation);
+					vec3.transformMat4(vertex, vertex, QM);
 				}
 
 				buffer.positions.set(vertex, buffer.positionsIndex);
@@ -313,7 +337,7 @@ export class RenderLayer {
 		}
 	}
 
-	addGeometryToObject(geometryId, uniqueId, loader, gpuBufferManager) {
+	addGeometryToObject(geometryId, uniqueId, loader, gpuBufferManager, quantFromAabb) {
 		var geometry = loader.geometries.get(geometryId);
 		if (geometry == null) {
 			if (this.geometryCache.has(geometryId)) {
@@ -324,7 +348,7 @@ export class RenderLayer {
 			}
 		}
 		var object = loader.objects.get(uniqueId);
-		this.addGeometry(loader.loaderId, geometry, object);
+		this.addGeometry(loader.loaderId, geometry, object, quantFromAabb);
 		object.geometry.push(geometryId);
 		if (geometry.isReused) {
 			geometry.reuseMaterialized++;
@@ -751,7 +775,7 @@ export class RenderLayer {
 				this,
 				gpuBufferManager
 			);
-
+newBuffer.unquantizationMatrix = buffer.unquantizationMatrix;
 			newBuffer.nrTrianglesToDraw = buffer.nrIndices / 3;
 			newBuffer.nrLinesToDraw = buffer.nrLineIndices / 2;
 

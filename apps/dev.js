@@ -7,6 +7,7 @@ import {Settings} from "../viewer/settings.js"
 import {ProjectTreeModel} from "../viewer/projecttreemodel.js"
 import {TreeView} from "../viewer/treeview.js"
 import {Credentials} from "./credentials.js"
+import {ThreeDTileLoader} from "../viewer/threedtileloader.js"
 
 /*
  * This class is where the applications starts, it's a mess, needs to go when we change this into an API
@@ -105,6 +106,29 @@ export class Dev {
 		document.addEventListener("keypress", this.keyPressHandler);
 
 		this.bimServerViewer.loadModel(this.api, project);
+
+		// Example: load glTF
+		// setTimeout(() => { this.bimServerViewer.loadGltf({url:"/assets/eindhoven.glb"}); }, 2000);
+
+		// Example: load 3D Tiles for schependomlaan
+		// const refLatitude = 51.841870;
+		// const refLongitude = 5.836210;
+		// new ThreeDTileLoader({
+		// 	url: 'https://www.nederlandin3d.nl/viewer/datasource-data/83812e58-981e-4461-b338-c95aa7212722/tileset.json',
+		// 	refLatitude: refLatitude,
+		// 	refLongitude: refLongitude,
+		// 	callback: (params) => {
+		// 		const factorX = (refLongitude - params.bounds[0]) / (params.bounds[2] - params.bounds[0]);
+		// 		const factorY = (refLatitude - params.bounds[1]) / (params.bounds[3] - params.bounds[1]);
+		// 		this.bimServerViewer.loadGltf({
+		// 			buffer: params.buffer,
+		// 			geospatial: true,
+		// 			ignoreMatrix: true, 
+		// 			Y_UP: true, 
+		// 			translate: [factorX, factorY]
+		// 		});
+		// 	}
+		// }).load();
 	}
 }
 
