@@ -15,7 +15,7 @@
 
 
     import { BimSurfer } from "../viewer/bimsurfer.js";
-    import { BimServerClient } from "../../bimserverjavascriptapi/bimserverclient.js"
+    import { BimServerClient } from '../../../node_modules/bimserverapi/bimserverclient.js';
     import { Address } from "./address.js";
     import { Credentials } from "./credentials.js"
     import { RenderLayer } from "../viewer/renderlayer.js";
@@ -25,22 +25,6 @@
     fetch("/../../test.glb").then(function (response) {
         return response.arrayBuffer();
     }).then(function (buffer) {
-
-<body>
-
-    <canvas></canvas>
-
-    <div id='apirefContainerContainer'>
-        <div id='apirefContainer'>
-        </div>
-    </div>
-
-    <script type="module">
-        import {BimSurfer} from "../viewer/bimsurfer.js";
-		//import {BimServerClient} from "../../bimserverjavascriptapi/bimserverclient.js"
-    import { BimServerClient } from '../../../../node_modules/bimserverapi/bimserverclient.js'; // npm package in myapp
-		import {Address} from "./address.js";
-		import {Credentials} from "./credentials.js"
 
         var surfer = window.bimSurfer = new BimSurfer();
         var api = new BimServerClient(Address.getApiAddress());
