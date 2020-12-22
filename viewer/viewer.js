@@ -47,15 +47,21 @@ export class Viewer {
 
   constructor(canvas, settings, stats, width, height) {
 
-    this.keyBindings = [
-      {key:"f", comment:"Fit on selected elements", callback: this.viewFitSelected},
-
-    ]
-
     this.width = width;
     this.height = height;
 
     this.defaultColors = settings.defaultColors ? settings.defaultColors : DefaultColors;
+
+    this.keyBindings = [
+      {key:"f", comment:"Fit on selected elements", action: this.viewFitSelected},
+      {key:"Escape", comment:"deselect selected", action: this.unSelect},
+      {key:"i", comment:"invert visibility", action: this.invertVisibility},
+      {key:"t", comment:"make unselected (t)ransparent", action: this.setUnselectedTransparent},
+      {key:"i", comment:"invert visibility", action: this.invertVisibility},
+      {key:"o", comment:"hide unselected (make (o)ther transparent)", action: this.hideUnselected},
+    ];  // Array of key bindings to listen to
+
+
 // Controls a couple of settings, such as no section plane cap, no automatic
     // camera near and far planes.
     this.geospatialMode = true;
@@ -170,11 +176,6 @@ export class Viewer {
 
         canvas.addEventListener("keydown", (evt) => {   //  replaced keypress by keydown to get escape key working
 
-          let action = that.keyBindings.find(x=> x.key === evt.key)
-          if (action !== undefined) {
-            console.log(action.callback)
-            action.callback()
-          }
 
           if (evt.key === 'h' || evt.key ===' ' || evt.key === 'Spacebar') { // Spacebar is hiding element as in bimcollab Zoom
             this.setVisibility(this.selectedElements, false, false);
@@ -189,29 +190,17 @@ export class Viewer {
           }
           else   if (evt.key === 'H' ) {
             this.resetVisibility();
-          } else if (evt.key === 'o')  { // as hide "o"thers (unselected) => works only if selection is not empty
-            // todo consider getting a substraction of two set and movig this to a dedicated method
-            this.hideUnselected()
           }
-          else if (evt.key === 't')  {  // set unselected to transparent
-            console.log('set unselected to transparent');
-            this.setUnselectedTransparent()
-          }
-          else if (evt.key === 'i')  {
-            this.invertVisibility()
-          }
-          else if (evt.key === 'f')  {
-            this.viewFitSelected()
-          }
-          else if (evt.key === "Escape" || evt.key === "Esc") {
-            // console.log('would like to deselect everything here..  escape key doesn\'t work with keypress so replaced by keydown...');
-            this.setSelectionState(this.selectedElements, false,true,true)// should work as FreezableSet implements Set methds
-          } else if (evt.key === "f" ) {
-            this.viewFitSelected
-          }
-          else {
-            // Don't do a drawScene for every key pressed
-            return;
+          else { // add default key bindings
+            let keyBinding = that.keyBindings.find(x=> x.key === evt.key)
+            if (keyBinding !== undefined) {
+              console.log(keyBinding.action)
+              //action.action()
+              keyBinding.action.call(this)
+            } else {
+              // Don't do a drawScene for every key pressed
+              return;
+            }
           }
           // this.drawScene();
         });
@@ -1053,8 +1042,13 @@ export class Viewer {
   }
 
   /***
-   *  Below API Helper functions bdamay
+   *  Below API Helper functions for default keybindings
    *  */
+
+  unSelect() {
+
+    this.setSelectionState(this.selectedElements, false,true,true)// should work as FreezableSet implements Set methds
+  }
 
   hideUnselected() {
     if (this.selectedElements.size>0) {
@@ -1079,7 +1073,6 @@ export class Viewer {
     let unselected = new Set([...allElements].filter(x => !this.selectedElements.has(x))); // substraction of sets as here
     // .. that we set to transparent
     this.setTransparent(unselected)
-
   }
 
   viewFitSelected() {
