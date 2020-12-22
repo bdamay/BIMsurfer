@@ -691,6 +691,7 @@ export class Viewer {
         gl.disable(gl.CULL_FACE);
 
         if (this.selectedElements.size > 0) {
+             /*  BDA disabling STENCIL_TEST here let line be thin and non redondant ?
             gl.enable(gl.STENCIL_TEST);
             gl.stencilOp(gl.KEEP, gl.KEEP, gl.REPLACE);
             gl.stencilFunc(gl.ALWAYS, 1, 0xff);
@@ -708,7 +709,7 @@ export class Viewer {
             for (var renderLayer of this.renderLayers) {
                 renderLayer.renderSelectionOutlines(this.selectedElements);
             }
-
+*/
             gl.disable(gl.STENCIL_TEST);
 
             for (var renderLayer of this.renderLayers) {
