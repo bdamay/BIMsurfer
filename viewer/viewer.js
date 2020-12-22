@@ -52,16 +52,6 @@ export class Viewer {
 
     this.defaultColors = settings.defaultColors ? settings.defaultColors : DefaultColors;
 
-    this.keyBindings = [
-      {key:"f", comment:"Fit on selected elements", action: this.viewFitSelected},
-      {key:"Escape", comment:"deselect selected", action: this.unSelect},
-      {key:"i", comment:"invert visibility", action: this.invertVisibility},
-      {key:"t", comment:"make unselected (t)ransparent", action: this.setUnselectedTransparent},
-      {key:"i", comment:"invert visibility", action: this.invertVisibility},
-      {key:"o", comment:"hide unselected (make (o)ther transparent)", action: this.hideUnselected},
-    ];  // Array of key bindings to listen to
-
-
 // Controls a couple of settings, such as no section plane cap, no automatic
     // camera near and far planes.
     this.geospatialMode = true;
@@ -167,20 +157,34 @@ export class Viewer {
 
     this.sectionPlaneIndex = 0;
 
+
+    this.keyBindings = [
+      {key:"h", comment:"hide selection", action: this.hideSelection},
+      {key:" ", comment:"hide selection", action: this.hideSelection},
+      {key:"H", comment:"reset visibility", action: this.resetVisibility},
+      {key:"f", comment:"viewFit on selected elements", action: this.viewFitSelected},
+      {key:"Escape", comment:"deselect selected", action: this.unSelect}, // as in
+      {key:"i", comment:"invert visibility", action: this.invertVisibility},
+      {key:"x", comment:"make unselected transparent (try x-ray)", action: this.setUnselectedTransparent},
+      {key:"i", comment:"invert visibility", action: this.invertVisibility},
+      {key:"o", comment:"hide unselected (make (o)ther transparent)", action: this.hideUnselected},
+
+    ];  // Array of key bindings to listen to
+
+
+
     if ("OffscreenCanvas" in window && canvas instanceof OffscreenCanvas) {
     } else {
       // Tabindex required to be able add a keypress listener to canvas
       canvas.setAttribute("tabindex", "0");
-      var that = this
+
+
+
       if (!this.settings.disableDefaultKeyBindings) {
 
         canvas.addEventListener("keydown", (evt) => {   //  replaced keypress by keydown to get escape key working
-
-
-          if (evt.key === 'h' || evt.key ===' ' || evt.key === 'Spacebar') { // Spacebar is hiding element as in bimcollab Zoom
-            this.setVisibility(this.selectedElements, false, false);
-            this.selectedElements.clear();
-          } else if (evt.key === 'C') {
+          evt.preventDefault() // preventDefault essentially for
+          if (evt.key === 'C') {
             this.resetColors();
           } else if (evt.key === 'c' || evt.key === 'd') {
             let R = Math.random;
@@ -191,12 +195,11 @@ export class Viewer {
           else   if (evt.key === 'H' ) {
             this.resetVisibility();
           }
-          else { // add default key bindings
-            let keyBinding = that.keyBindings.find(x=> x.key === evt.key)
+          else { // add default key bindings -- yet allows only one key2
+            let keyBinding = this.keyBindings.find(x=> x.key === evt.key)
+            console.log(evt.key)
             if (keyBinding !== undefined) {
-              console.log(keyBinding.action)
-              //action.action()
-              keyBinding.action.call(this)
+              keyBinding.action.call(this) //
             } else {
               // Don't do a drawScene for every key pressed
               return;
@@ -1045,9 +1048,14 @@ export class Viewer {
    *  Below API Helper functions for default keybindings
    *  */
 
-  unSelect() {
+  hideSelection () {
 
-    this.setSelectionState(this.selectedElements, false,true,true)// should work as FreezableSet implements Set methds
+    this.setVisibility(this.selectedElements, false, false);
+    this.selectedElements.clear();
+  }
+
+  unSelect() {
+    this.setSelectionState(this.selectedElements, false,true,true)
   }
 
   hideUnselected() {
@@ -1060,7 +1068,7 @@ export class Viewer {
 
   invertVisibility()  {
     // Actually keeps selection alive
-    let __invisible = new Set(this.invisibleElements) // create a copy of the invisible property that we'll have to set visible
+    let __invisible = new Set(this.invisibleElements) // creates a copy of the invisible property that we'll have to set visible
     this.setVisibility(this.viewObjects.keys(),false, true, true)
     this.setVisibility(__invisible, true, true, true);
   }
