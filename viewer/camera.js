@@ -28,8 +28,8 @@ export class Camera {
         this._viewNormalMatrix = mat3.create();
 
         this._eye = new AnimatedVec3(0.0, 0.0, -10.0); // World-space eye position
-        this._target = new AnimatedVec3(0.0, 0.0, 0.0); // World-space point-of-interest        
-        
+        this._target = new AnimatedVec3(0.0, 0.0, 0.0); // World-space point-of-interest
+
         this._up = vec3.fromValues(0.0, 1.0, 0.0); // Camera's "up" vector, always orthogonal to eye->target
         this._center = vec3.copy(vec3.create(), this._target.get());
         this._negatedCenter = vec3.create();
@@ -60,7 +60,7 @@ export class Camera {
         this.tmp_modelBounds = vec3.create();
 
         this.yawMatrix = mat4.create();
-        
+
         // Until there is a proper event handler mechanism, just do it manually.
         this.listeners = [];
         this.lowVolumeListeners = [];
@@ -77,7 +77,7 @@ export class Camera {
 	    this._tmp_interpolate_d = vec4.create();
 	    this._tmp_interpolate_e = mat4.create();
         this._tmp_interpolate_f = vec3.create();
-        
+
         this._tmp_eye = vec3.create();
         this._tmp_target = vec3.create();
     }
@@ -101,7 +101,7 @@ export class Camera {
 
         this.perspective.setModelBounds(vec3.clone(bounds));
         this.orthographic.setModelBounds(vec3.clone(bounds));
-        
+
         // Store aabb calculated from points
         let a = vec3.fromValues(+Infinity, +Infinity, +Infinity);
         let b = vec3.fromValues(-Infinity, -Infinity, -Infinity);
@@ -123,7 +123,7 @@ export class Camera {
                         }
                     }
                 }
-            }   
+            }
         }
 
         vec3.add(a, a, b);
@@ -152,7 +152,7 @@ export class Camera {
         mat3.fromMat4(this.tempMat3b, this._viewMatrix);
         mat3.invert(this.tempMat3b, this.tempMat3b);
         mat3.transpose(this._viewNormalMatrix, this.tempMat3b);
-        
+
         let [near, far] = [+Infinity, -Infinity];
 
         if (this.autonear && this._modelBounds) {
@@ -177,19 +177,19 @@ export class Camera {
         this.perspective.near = near - 1e-2;
         this.perspective.far = far + 1e-2;
         this.orthographic.near = near - 1e-2;
-        this.orthographic.far = far + 1e-2;        
+        this.orthographic.far = far + 1e-2;
 
         mat4.invert(this._viewMatrixInverted, this._viewMatrix);
         mat4.multiply(this._viewProjMatrix, this.projMatrix, this._viewMatrix);
         mat4.invert(this._viewProjMatrixInverted, this._viewProjMatrix);
 
         this._dirty = false;
-        
+
         for (var listener of this.listeners) {
         	listener();
         }
     }
-    
+
     _build() {
         if (this._dirty && !this._locked && this._modelBounds) {
         	this.forceBuild();
@@ -487,7 +487,7 @@ export class Camera {
     get orbitting() {
     	return this._orbitting;
     }
-    
+
     /**
      Rotates the eye position about the target position, pivoting around the up vector.
 
@@ -499,12 +499,12 @@ export class Camera {
         let target = this._target.get();
 
         // @todo, these functions are not efficient nor numerically stable, but simple to understand.
-        
+
     	mat4.identity(this.yawMatrix);
     	mat4.translate(this.yawMatrix, this.yawMatrix, this._center);
     	mat4.rotate(this.yawMatrix, this.yawMatrix, degrees * 0.0174532925 * 2, this._worldUp);
     	mat4.translate(this.yawMatrix, this.yawMatrix, this._negatedCenter);
-    	
+
         vec3.transformMat4(eye, eye, this.yawMatrix);
         vec3.transformMat4(target, target, this.yawMatrix);
 
@@ -627,7 +627,7 @@ export class Camera {
         let target = this._target.get();
 
     	this.orthographic.zoom(delta);
-    	
+
         let [x,y] = canvasPos;
         vec3.set(this.tempVec3, x / this.viewer.width * 2 - 1, - y / this.viewer.height * 2 + 1, 1.);
         vec3.transformMat4(this.tempVec3, this.tempVec3, this.projection.projMatrixInverted);
@@ -643,7 +643,7 @@ export class Camera {
 
         this.updateLowVolumeListeners();
     }
-    
+
     updateLowVolumeListeners() {
         for (var listener of this.lowVolumeListeners) {
         	listener();
@@ -684,7 +684,7 @@ export class Camera {
 
         let d = vec3.dot(this._tmp_interpolate_current_dir, this._tmp_interpolate_new_dir);
 
-        if (d > 0.5) {          
+        if (d > 0.5) {
             // More or less pointing in the same direction
 
             this._eye.b.set(newEye);
@@ -725,7 +725,7 @@ export class Camera {
             vec3.scale(intermediate, intermediate, (l1 + l2) / 2.);
             vec3.add(intermediate, intermediate, newTarget);
             let intermediate3 = intermediate.subarray(0,3);
-            
+
             this._eye.b.set(intermediate3);
             this._target.b.set(vec3.lerp(this._tmp_interpolate_f, this.target, newTarget, 0.5));
             this._eye.c.set(newEye);
@@ -743,7 +743,7 @@ export class Camera {
      */
     viewFit(params) {
         let eye, target, eye2, target2;
-        
+
         if (params.animate) {
             eye = this._eye.get();
             target = this._target.get();

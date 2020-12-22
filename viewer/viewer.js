@@ -50,20 +50,21 @@ export class Viewer {
     this.width = width;
     this.height = height;
 
-    this.defaultColors = settings.defaultColors ? settings.defaultColors : DefaultColors;
+        this.defaultColors = settings.defaultColors ? settings.defaultColors : DefaultColors;
 
-// Controls a couple of settings, such as no section plane cap, no automatic
-    // camera near and far planes.
-    this.geospatialMode = true;
-    this.stats = stats;
-    this.settings = settings;
-    this.canvas = canvas;
-    this.camera = new Camera(this);
-    if (settings.useOverlay) {
-      this.overlay = new SvgOverlay(this.canvas, this.camera);
-    }
+        // Controls a couple of settings, such as no section plane cap, no automatic
+        // camera near and far planes.
+        this.geospatialMode = false;
 
-    this.gl = this.canvas.getContext('webgl2', {stencil: true, premultipliedAlpha: false, preserveDrawingBuffer: true});
+        this.stats = stats;
+        this.settings = settings;
+        this.canvas = canvas;
+        this.camera = new Camera(this);
+        if (settings.useOverlay) {
+        	this.overlay = new SvgOverlay(this.canvas, this.camera);
+        }
+
+        this.gl = this.canvas.getContext('webgl2', {stencil: true, premultipliedAlpha: false, preserveDrawingBuffer: true});
 
     if (!this.gl) {
       alert('Unable to initialize WebGL. Your browser or machine may not support it.');
