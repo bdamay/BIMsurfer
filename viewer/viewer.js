@@ -162,6 +162,7 @@ export class Viewer {
       {key:" ", comment:"hide selection", action: this.hideSelection},
       {key:"H", comment:"reset visibility", action: this.resetVisibility},
       {key:"c", comment:"set random colors", action: this.colorSelectionRandomly},
+      {key:"v", comment:"set random colors for types selected", action: this.colorSelectedTypesRandomly},
       {key:"d", comment:"set random colors and random transparency", action: this.colorSelectionRandomlyWithTransparency},
       {key:"C", comment:"reset colors", action: this.resetColors},
       {key:"f", comment:"viewFit on selected elements", action: this.viewFitSelected},
@@ -170,6 +171,7 @@ export class Viewer {
       {key:"x", comment:"make unselected transparent (try x-ray)", action: this.setUnselectedTransparent},
       {key:"o", comment:"hide unselected (make (o)ther transparent)", action: this.hideUnselected},
       {key:"O", comment:"hide unselected types", action: this.hideUnselectedTypes},
+      {key:"s", comment:"Select similar types of objects selected ", action: this.selectSimilarTypes},
 
     ];  // Array of key bindings to listen to
 
@@ -180,7 +182,7 @@ export class Viewer {
         	canvas.setAttribute("tabindex", "0");
 			if (!this.settings.disableDefaultKeyBindings) {
 
-	        	canvas.addEventListener("keypress", (evt) => {
+	        	canvas.addEventListener("keydown", (evt) => {
                // add default key bindings -- yet allows only one keypress
                 let keyBinding = this.keyBindings.find(x=> x.key === evt.key)
                 //console.log(evt.key)
@@ -574,7 +576,7 @@ export class Viewer {
 
         for (var renderLayer of this.renderLayers) {
             renderLayer.prepareRender(reason);
-//            renderLayer.renderLines();
+            renderLayer.renderLines();
         }
 
         gl.enable(gl.CULL_FACE);
@@ -713,7 +715,7 @@ export class Viewer {
             gl.disable(gl.STENCIL_TEST);
 
             for (var renderLayer of this.renderLayers) {
-                renderLayer.renderSelectionOutlines(this.selectedElements, 0.002);
+                renderLayer.renderSelectionOutlines(this.selectedElements, 0.001); // let's say i like very thin selection line
             }
         }
 
@@ -1060,12 +1062,26 @@ export class Viewer {
     return new Set(Array.from(this.selectedElements).map(x => this.viewObjects.get(x).type))
   }
 
-  getIdsForTypes(types) {
+  selectSimilarTypes() {
+    // get types of selected elements and select all similar
+    let ids = this.getObjectsIdsOfTypes(this.getSelectedTypes())
+    this.setSelectionState(ids, true, true)
+
+  }
+
+  selectObjectOfTypes(types) {
+    /*** Given the types (Array or Set) unselect all and set selection to these */
+    this.unSelect()
+    let ids = this.getObjectsIdsOfTypes(types)
+    this.setSelectionState(ids, true, true)
+
+  }
+
+  getObjectsIdsOfTypes(types) {
     /***
      Make all objects of certain type
-     types is an set of types
+     types is set or array of types
      */
-
     let types_arr = Array.from(types)
     let objects = []
     types_arr.forEach(x => objects.push(...this.viewObjectsByType.get(x))) // gives an array of array objects
@@ -1078,16 +1094,18 @@ export class Viewer {
     if (this.selectedElements.size>0) {
       // First we need to get IfcTypes that are selected
       let selectedTypes = this.getSelectedTypes()
-      let objects = this.getIdsForTypes(selectedTypes)
+      let objects = this.getObjectsIdsOfTypes(selectedTypes)
       this.setVisibility(objects,false)
     }
   }
+
+
 
   hideUnselectedTypes() {
     if (this.selectedElements.size>0) {
       // First we need to get IfcTypes that are selected
       let selectedTypes = this.getSelectedTypes()
-      let objects = this.getIdsForTypes(selectedTypes)
+      let objects = this.getObjectsIdsOfTypes(selectedTypes)
       let allElements = new Set(this.viewObjects.keys());
       let unselected = new Set([...allElements].filter(x => objects.indexOf(x) < 0)); // substraction of sets as here
       this.setVisibility(unselected,false)
@@ -1180,6 +1198,12 @@ export class Viewer {
 
   colorSelectionRandomly() {
     		this.setColor(new Set(this.selectedElements), this.getRandomColor(false));
+  }
+
+  colorSelectedTypesRandomly() {
+        this.selectSimilarTypes()
+        console.log('similar types selected')
+    		this.colorSelectionRandomly()
   }
 
   colorSelectionRandomlyWithTransparency() {

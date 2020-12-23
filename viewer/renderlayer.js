@@ -8,7 +8,7 @@ import {FrozenBufferSet} from "./frozenbufferset.js";
 
 import {AvlTree} from "./collections/avltree.js";
 
-const outlineColor = new Float32Array([0, 1, 1, 0.2]); // i like light cyan
+const outlineColor = new Float32Array([0, 1, 1, 0.1]); // i like light cyan
 const false_true = [false, true];
 const UINT32_MAX = (new Uint32Array((new Int32Array([-1])).buffer))[0];
 
@@ -37,7 +37,7 @@ export class RenderLayer {
 
 		this.selectionOutlineMatrix = mat4.create();
 
-		this.lines = null;
+		this.lines =  null;
 		this.loaders = new Map();
 		this.bufferTransformer = new BufferTransformer(this.settings, viewer.vertexQuantization);
 
@@ -811,6 +811,7 @@ newBuffer.unquantizationMatrix = buffer.unquantizationMatrix;
 
 	renderLines() {
 		if (this.lines) {
+	    // console.log('render lines ')
 			let bufferManager = this.gpuBufferManager;
 			let viewer = bufferManager.viewer;
 			this.lines.renderStart(viewer, this);
@@ -850,6 +851,8 @@ newBuffer.unquantizationMatrix = buffer.unquantizationMatrix;
 										}
 										// TODO move outlineColor to renderStart, saves us another uniform, same probably for width
 										// TODO selectionOutlineMatrix most of the is an identify matrix, no need to send that to the GPU?
+                    // console.log('render selection outlines ')
+
 										lines.render(outlineColor, lines.matrixMap.get(id) || this.selectionOutlineMatrix, width || 0.01);
 										lastLineRenderer = lines;
 									}
