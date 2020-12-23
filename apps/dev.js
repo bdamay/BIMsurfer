@@ -1,6 +1,6 @@
 import {Address} from "./address.js";
 // import {BimServerClient} from "../../bimserverjavascriptapi/bimserverclient.js"
-import { BimServerClient } from '../../../../node_modules/bimserverapi/bimserverclient.js'
+import { BimServerClient } from '../node_modules/bimserverapi/bimserverclient.js'
 import {BimServerViewer} from "../viewer/bimserverviewer.js"
 import {Stats} from "../viewer/stats.js"
 import {Settings} from "../viewer/settings.js"
@@ -135,8 +135,8 @@ export class Dev {
 		// 		this.bimServerViewer.loadGltf({
 		// 			buffer: params.buffer,
 		// 			geospatial: true,
-		// 			ignoreMatrix: true, 
-		// 			Y_UP: true, 
+		// 			ignoreMatrix: true,
+		// 			Y_UP: true,
 		// 			translate: [factorX, factorY],
 		// 			elevation: refElevation,
 		// 			refMatrix: cesiumMatrixGl,

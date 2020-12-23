@@ -15,14 +15,14 @@
 
 
     import { BimSurfer } from "../viewer/bimsurfer.js";
-    import { BimServerClient } from '../../../node_modules/bimserverapi/bimserverclient.js';
+    import { BimServerClient } from '../node_modules/bimserverapi/bimserverclient.js';
     import { Address } from "./address.js";
     import { Credentials } from "./credentials.js"
     import { RenderLayer } from "../viewer/renderlayer.js";
     import { BimServerViewer } from "../viewer/bimserverviewer.js";
 
 
-    fetch("/../../test.glb").then(function (response) {
+    fetch("test.glb").then(function (response) {
         return response.arrayBuffer();
     }).then(function (buffer) {
 

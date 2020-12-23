@@ -168,8 +168,8 @@ export class Viewer {
       {key:"Escape", comment:"deselect selected", action: this.unSelect}, // as in
       {key:"i", comment:"invert visibility", action: this.invertVisibility},
       {key:"x", comment:"make unselected transparent (try x-ray)", action: this.setUnselectedTransparent},
-      {key:"i", comment:"invert visibility", action: this.invertVisibility},
       {key:"o", comment:"hide unselected (make (o)ther transparent)", action: this.hideUnselected},
+      {key:"O", comment:"hide unselected types", action: this.hideUnselectedTypes},
 
     ];  // Array of key bindings to listen to
 
@@ -1051,6 +1051,45 @@ export class Viewer {
     if (this.selectedElements.size>0) {
       let allElements = new Set(this.viewObjects.keys());
       let unselected = new Set([...allElements].filter(x => !this.selectedElements.has(x))); // substraction of sets as here
+      this.setVisibility(unselected,false)
+    }
+  }
+  getSelectedTypes() {
+    //let types = Set()
+    // Returns a set of types that are currently selected
+    return new Set(Array.from(this.selectedElements).map(x => this.viewObjects.get(x).type))
+  }
+
+  getIdsForTypes(types) {
+    /***
+     Make all objects of certain type
+     types is an set of types
+     */
+
+    let types_arr = Array.from(types)
+    let objects = []
+    types_arr.forEach(x => objects.push(...this.viewObjectsByType.get(x))) // gives an array of array objects
+    return objects.map(x => x.uniqueId)
+    // console.log('get objects of certain types ') // uses th
+    // console.log(objects)
+  }
+
+  hideSelectedTypes() {
+    if (this.selectedElements.size>0) {
+      // First we need to get IfcTypes that are selected
+      let selectedTypes = this.getSelectedTypes()
+      let objects = this.getIdsForTypes(selectedTypes)
+      this.setVisibility(objects,false)
+    }
+  }
+
+  hideUnselectedTypes() {
+    if (this.selectedElements.size>0) {
+      // First we need to get IfcTypes that are selected
+      let selectedTypes = this.getSelectedTypes()
+      let objects = this.getIdsForTypes(selectedTypes)
+      let allElements = new Set(this.viewObjects.keys());
+      let unselected = new Set([...allElements].filter(x => objects.indexOf(x) < 0)); // substraction of sets as here
       this.setVisibility(unselected,false)
     }
   }

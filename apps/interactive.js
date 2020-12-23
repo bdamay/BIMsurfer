@@ -1,6 +1,6 @@
 // At the moment this API is loaded from a BIMserver, you could also include the API files in your viewer
 //import {BimServerClient} from "../../bimserverjavascriptapi/bimserverclient.js"
-import { BimServerClient } from '../../../../node_modules/bimserverapi/bimserverclient.js'; // npm package in myapp
+import { BimServerClient } from '../node_modules/bimserverapi/bimserverclient.js'; // npm package in myapp
 import {BimServerViewer} from "../viewer/bimserverviewer.js"
 import {TreeView} from "../viewer/treeview.js"
 import {ProjectTreeModel} from "../viewer/projecttreemodel.js"

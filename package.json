@@ -23,7 +23,7 @@
   },
   "keywords": [],
   "dependencies": {
-    "bimserverapi": "*",
+    "bimserverapi": "0.0.167",
     "xhr2": "*"
   },
   "devDependencies": {
