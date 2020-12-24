@@ -163,12 +163,12 @@ export class Viewer {
       {key:"H", comment:"reset visibility", action: this.resetVisibility},
       {key:"c", comment:"set random colors", action: this.colorSelectionRandomly},
       {key:"v", comment:"set random colors for types selected", action: this.colorSelectedTypesRandomly},
-      {key:"d", comment:"set random colors and random transparency", action: this.colorSelectionRandomlyWithTransparency},
+      {key:"t", comment:"set random colors and random transparency", action: this.colorSelectionRandomlyWithTransparency},
       {key:"C", comment:"reset colors", action: this.resetColors},
       {key:"f", comment:"viewFit on selected elements", action: this.viewFitSelected},
       {key:"Escape", comment:"deselect selected", action: this.unSelect}, // as in
       {key:"i", comment:"invert visibility", action: this.invertVisibility},
-      {key:"x", comment:"make unselected transparent (try x-ray)", action: this.setUnselectedTransparent},
+      {key:"X", comment:"make unselected transparent (try x-ray)", action: this.setUnselectedTransparent},
       {key:"o", comment:"hide unselected (make (o)ther transparent)", action: this.hideUnselected},
       {key:"O", comment:"hide unselected types", action: this.hideUnselectedTypes},
       {key:"s", comment:"Select similar types of objects selected ", action: this.selectSimilarTypes},
@@ -320,6 +320,8 @@ export class Viewer {
      * The order already in elems will stay intact
      */
     generateBufferSetToOidsMap(elems) {
+
+
 		var bufferSetsToUpdate = new Map();
 		for (let uniqueId of elems) {
 			const bufferSets = this.uniqueIdToBufferSet.get(uniqueId);
@@ -340,9 +342,14 @@ export class Viewer {
     }
 
     setColor(elems, clr, fireEvent=true) {
+      console.log('set colors')
         let aug = this.idAugmentationFunction;
-		let promise = this.invisibleElements.batch(() => {
+		  let promise = this.invisibleElements.batch(() => {
 			var bufferSetsToUpdate = this.generateBufferSetToOidsMap(elems);
+			// NB BDA:  Seems that element that changing color AND transparency are actually not changing from bufferset to the other
+      //  result is that a transparent element is in a non transparent bufferset as it may by should be changed
+      // May be refrshing all bufferset could solve this ?
+
 			// Reset colors first to clear any potential transparency overrides.
 			return this.resetColorAlreadyBatched(elems, bufferSetsToUpdate).then(() => {
 				for (let [bufferSetId, bufferSetObject] of bufferSetsToUpdate) {
@@ -1217,11 +1224,16 @@ export class Viewer {
   }
 
   setTransparent(elements) {
-    // Make a Set of elements transparent giving only x-ray effect
-    let clr = [1, 1, 1,  0.13]; // white and transparent is the best combination i can think of
-    // todo: problem is that it's coloring in white objects that are selected but behind one transparent object
-    //  (so as MEP behind a white transparent wall) - Cannot figure out a simple way to avoid this effect without
-    //  going deeper in my gl comprehension (bda)
+    // Make a Set of elements transparent giving some of  x-ray effect
+    //  (so for example we can see  MEP behind a  transparent wall)
+    let clr = [0.3, 0.3, 0.3,  0.25];
+    // light grey with not too much transparency seems to give the best effect i can find as
+    // it doesn't alter too much the original colors
+
+
+
+
+    //  going further on this feature => need to dig into bufferSet
     this.setColor(elements, clr)
   }
 

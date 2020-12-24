@@ -7,17 +7,17 @@ var counter = 1;
  * @ignore
  */
 export class AbstractBufferSet {
-    
+
     constructor(viewer, reuse) {
     	this.viewer = viewer;
     	this.reuse = reuse;
         // Unique id per bufferset, easier to use as Map key
         this.id = counter++;
-        
+
         this.dirty = true;
-        
+
         this.nonceCache = new Map();
-        
+
         this.reset(viewer);
     }
 
@@ -52,7 +52,7 @@ export class AbstractBufferSet {
 //		console.log("Joined", input.pos, result.pos);
     	return result;
     }
-    
+
     /**
      * More efficient version of complementRanges, but also creates new buffers.
      */
@@ -94,7 +94,7 @@ export class AbstractBufferSet {
     		var offset = input.offsetsBytes[i] / 4;
     		var lineRenderCount = input.lineRenderCounts[i];
     		var lineRenderOffset = input.lineRenderOffsetsBytes[i] / 4;
-    		
+
     		var newCount = offset - previousIndex;
     		var newLineRenderCount = lineRenderOffset - previousLineRenderIndex;
     		if (newCount > 0) {
@@ -113,8 +113,8 @@ export class AbstractBufferSet {
     }
 
     /**
-     * When changing colors, a lot of data is read from the GPU. It seems as though all of this reading is sync, making it a bottle-neck 
-     * When wrapping abstractbufferset calls that read from the GPU buffer in batchGpuRead, the complete bufferset is read into memory once, and is removed afterwards  
+     * When changing colors, a lot of data is read from the GPU. It seems as though all of this reading is sync, making it a bottle-neck
+     * When wrapping abstractbufferset calls that read from the GPU buffer in batchGpuRead, the complete bufferset is read into memory once, and is removed afterwards
      */
     batchGpuRead(gl, toCopy, bounds, fn) {
     	if (this.objects) {
@@ -132,7 +132,7 @@ export class AbstractBufferSet {
     			maxIndex: this.nrPositions
     		};
     	}
-    	
+
     	this.batchGpuBuffers = {
    			indices: new Uint32Array(bounds.endIndex - bounds.startIndex),
    			lineIndices: new Uint32Array(bounds.endLineIndex - bounds.startLineIndex),
@@ -144,7 +144,7 @@ export class AbstractBufferSet {
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
         gl.getBufferSubData(gl.ELEMENT_ARRAY_BUFFER, bounds.startIndex * 4, this.batchGpuBuffers.indices, 0, bounds.endIndex - bounds.startIndex);
-        
+
         if (this.lineIndexBuffer == null) {
         	debugger;
         }
@@ -157,7 +157,7 @@ export class AbstractBufferSet {
             let gpu_data = new window[buffer.js_type]((bounds.maxIndex - bounds.minIndex) * buffer.components);
 
             this.batchGpuBuffers[name] = gpu_data;
-            
+
             gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
             gl.getBufferSubData(gl.ARRAY_BUFFER, bounds.minIndex * buffer.components * bytes_per_elem, gpu_data, 0, gpu_data.length);
         }
@@ -180,21 +180,21 @@ export class AbstractBufferSet {
         }, this.unquantizationMatrix);
 
         lineRenderer.init(b - a);
-        
+
         const positions = new window[this.positionBuffer.js_type](this.positionBuffer.N);
         const indices = new window[this.indexBuffer.js_type](b-a);
-        
+
         // @todo: get only part of positions [min(indices), max(indices)]
         var restoreArrayBinding = gl.getParameter(gl.ARRAY_BUFFER_BINDING);
         gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
         gl.getBufferSubData(gl.ARRAY_BUFFER, 0, positions);
-        
+
         var restoreElementBinding = gl.getParameter(gl.ELEMENT_ARRAY_BUFFER_BINDING);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
         gl.getBufferSubData(gl.ELEMENT_ARRAY_BUFFER, a * 4, indices, 0, indices.length);
-        
+
         const s = new Set();
-        
+
         for (let i = 0; i < indices.length; i += 3) {
             let abc = indices.subarray(i, i + 3);
 
@@ -210,22 +210,22 @@ export class AbstractBufferSet {
                 }
             }
         }
-        
+
         for (let e of s) {
             let [a,b] = e.split(":");
             let A = positions.subarray(a * 3).subarray(0,3);
             let B = positions.subarray(b * 3).subarray(0,3);
             lineRenderer.pushVertices(A, B);
-        }			
+        }
 
-        lineRenderer.finalize();            
+        lineRenderer.finalize();
 
         gl.bindBuffer(gl.ARRAY_BUFFER, restoreArrayBinding);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, restoreElementBinding);
 
         return lineRenderer;
     }
-    
+
     createLineRenderer(gl, uniqueId, a, b) {
         const lineRenderer = new FatLineRenderer(this.viewer, gl, {
             quantize: this.positionBuffer.js_type !== Float32Array.name
@@ -241,11 +241,11 @@ export class AbstractBufferSet {
 
 			const bounds = this.batchGpuBuffers.bounds;
 			const vertexOffset = -bounds.minIndex * 3;
-			
+
 			let gpu_data = this.batchGpuBuffers["positionBuffer"];
 
 			var offset, length;
-			
+
 			if (this.uniqueIdToIndex == null) {
 				offset = 0;
 				length = this.nrLineIndices;
@@ -255,7 +255,7 @@ export class AbstractBufferSet {
 				offset = idx.lineIndicesStart;
 				length = idx.lineIndicesLength;
 			}
-			
+
 			var indexOffset = offset - bounds.startLineIndex;
 
 			lineRenderer.init(length);
@@ -270,7 +270,7 @@ export class AbstractBufferSet {
 				let B = gpu_data.subarray(bs, bs + 3);
 				lineRenderer.pushVertices(A, B);
 			}
-			
+
 			lineRenderer.finalize();
 
 			return lineRenderer;
@@ -284,21 +284,21 @@ export class AbstractBufferSet {
 			let gpu_data = this.batchGpuBuffers["positionBuffer"];
 
 			const bounds = this.batchGpuBuffers.bounds;
-			
+
 			var size = 0;
-			
+
 			// A more efficient (and certainly more compact) version that used bitshifting was working fine up until 16bits, unfortunately JS only does bitshifting < 32 bits, so now we have this crappy solution
-			
+
 			var indexOffset = offset - bounds.startIndex;
-			
+
 			const s = new Set();
-			
+
 			const indices = this.batchGpuBuffers.indices;
 			for (var i=0; i<length; i+=3) {
 				for (let j = 0; j < 3; ++j) {
 					let a = indices[indexOffset + i + j];
 					let b = indices[indexOffset + i + (j+1)%3];
-					
+
 					if (a > b) {
 						const tmp = a;
 						a = b;
@@ -314,7 +314,7 @@ export class AbstractBufferSet {
 					}
 				}
 			}
-			
+
 			lineRenderer.init(s.size);
 			const vertexOffset = -bounds.minIndex * 3;
 			for (let e of s) {
@@ -326,7 +326,7 @@ export class AbstractBufferSet {
 				let B = gpu_data.subarray(bs, bs + 3);
 				lineRenderer.pushVertices(A, B);
 			}
-			
+
 			lineRenderer.finalize();
 
 			return lineRenderer;
@@ -340,7 +340,7 @@ export class AbstractBufferSet {
     		const range = idRange[1];
     		if (this.uniqueIdToIndex) {
     			let idx = this.uniqueIdToIndex.get(oid)[0];
-    			
+
     			// Regular indices
     			if (bounds.startIndex == null || range[0] < bounds.startIndex) {
     				bounds.startIndex = range[0];
@@ -355,7 +355,7 @@ export class AbstractBufferSet {
     				// This one seems to be wrong
     				bounds.maxIndex = idx.maxIndex + 1;
     			}
-    			
+
     			// Line indices
     			if (bounds.startLineIndex == null || range[2] < bounds.startLineIndex) {
     				bounds.startLineIndex = range[2];
@@ -391,21 +391,21 @@ export class AbstractBufferSet {
     computeVisibleInstances(ids_with_or_without, gl) {
     	const ids = ids_with_or_without.with ? ids_with_or_without.with : ids_with_or_without.without;
         const exclude = "without" in ids_with_or_without;
-        
+
 		const ids_str = exclude + ':' + ids.frozen;
 
     	if (ids.nonce) {
     		var nonce = ids.nonce + (ids_with_or_without.with ? "w" : "o");
     		const cachedValue = this.nonceCache.get(nonce);
     		if (cachedValue) {
-    			/* Using the nonce of the FrozenBufferSet here so we can skip the potentially very heavy this.visibleRanges.get call (seems to be real slow for large strings), 
+    			/* Using the nonce of the FrozenBufferSet here so we can skip the potentially very heavy this.visibleRanges.get call (seems to be real slow for large strings),
     			 * basically we use different layers of cache here.
     			 * It remains to be seen how useful the second layer of caching actually is
     			 */
     			return cachedValue;
     		}
     	}
-		
+
         {
             var cache_lookup;
             if ((cache_lookup = this.visibleRanges.get(ids_str))) {
@@ -431,7 +431,7 @@ export class AbstractBufferSet {
             : ranges.instanceIds.length > 0;
 
         this.visibleRanges.set(ids_str, ranges);
-        
+
         this.storeInCacheAndReturn(null, ranges, nonce);
 
 //        debugger;
@@ -447,7 +447,7 @@ export class AbstractBufferSet {
 
         return ranges;
     }
-    
+
     // generator function that yields ranges in this buffer for the selected ids
     * _(uniqueIdToIndex, ids) {
         var oids;
@@ -470,7 +470,7 @@ export class AbstractBufferSet {
     			: [[this.uniqueId & 0x8FFFFFFF, [0, this.nrIndices]]];
     	return id_ranges;
     }
-    
+
     /**
      * Generator function that yields ranges in this buffer for the selected ids
      * This one tries to do better than _ by utilizing the fact (requirement) that both uniqueIdToIndex and ids are numerically ordered beforehand
@@ -499,7 +499,7 @@ export class AbstractBufferSet {
     		}
     	}
     }
-	
+
     generateIdRanges(uniqueId, gl) {
     	if (this.uniqueIdToIndex) {
     		var indices = this.uniqueIdToIndex.get(uniqueId);
@@ -511,7 +511,7 @@ export class AbstractBufferSet {
     		return [[uniqueId, [0, this.nrIndices, 0, this.nrLineIndices]]];
     	}
     }
-    
+
     computeVisibleRangesAsBuffers(ids_with_or_without, gl) {
     	if (this.dirty) {
     		// TODO maybe we can reuse something here?
@@ -520,32 +520,32 @@ export class AbstractBufferSet {
     		this.nonceCache.clear();
     		this.dirty = false;
     	}
-    	
+
     	var ids = ids_with_or_without.with ? ids_with_or_without.with : ids_with_or_without.without;
 
     	if (ids.nonce !== undefined) {
     		var nonce = ids.nonce + (ids_with_or_without.with ? "w" : "o");
     		const cachedValue = this.nonceCache.get(nonce);
     		if (cachedValue) {
-    			/* Using the nonce of the FrozenBufferSet here so we can skip the potentially very heavy this.visibleRanges.get call (seems to be real slow for large strings), 
+    			/* Using the nonce of the FrozenBufferSet here so we can skip the potentially very heavy this.visibleRanges.get call (seems to be real slow for large strings),
     			 * basically we use different layers of cache here.
     			 * It remains to be seen how useful the second layer of caching actually is
     			 */
     			return cachedValue;
     		}
     	}
-    	
+
     	var exclude = "without" in ids_with_or_without;
-    	
+
 //    	const ids_str = exclude + ':' +  ids.frozen;
-    	
+
 //    	{
 //    		var cache_lookup;
 //    		if ((cache_lookup = this.visibleRanges.get(ids_str))) {
 //    			return cache_lookup;
 //    		}
 //    	}
-    	
+
     	if (ids === null || ids.size === 0) {
     		let result =  {
     			counts: new Int32Array([this.nrIndices]),
@@ -556,10 +556,10 @@ export class AbstractBufferSet {
     		};
     		return this.storeInCacheAndReturn(null, result, nonce);
     	}
-    	
+
     	var iterator1 = this.uniqueIdToIndex.keys();
     	var iterator2 = ids._set[Symbol.iterator]();
-    	
+
     	var id_ranges = null;
     	if (this.uniqueIdToIndex) {
     		id_ranges = Array.from(this.findUnion(iterator1, iterator2)).sort((a, b) => (a[1][0] > b[1][0]) - (a[1][0] < b[1][0]));
@@ -568,7 +568,7 @@ export class AbstractBufferSet {
 			// non-instanced bufferset for one particular overriden object
 			id_ranges = [[this.uniqueId & 0x8FFFFFFF, [0, this.nrIndices, 0, this.nrLineIndices]]];
     	}
-    	
+
     	var result = {
     		counts: new Int32Array(id_ranges.length),
     		offsetsBytes: new Int32Array(id_ranges.length),
@@ -576,7 +576,7 @@ export class AbstractBufferSet {
     		lineRenderOffsetsBytes: new Int32Array(id_ranges.length),
     		pos: id_ranges.length
     	};
-    	
+
     	var c = 0;
     	for (const range of id_ranges) {
     		const realRange = range[1];
@@ -586,22 +586,22 @@ export class AbstractBufferSet {
     		result.lineRenderCounts[c] = realRange[3] - realRange[2];
     		c++;
     	}
-    	
+
     	this.lastIdRanges = id_ranges;
     	this.lastExclude = exclude;
-    	
+
     	result = this.joinConsecutiveRangesAsBuffers(result);
-    	
+
     	if (exclude) {
     		let complement = this.complementRangesAsBuffers(result);
     		return this.storeInCacheAndReturn(null, complement, nonce);
     	}
-    	
-    	// Create fat line renderings for these elements. This should (a) 
+
+    	// Create fat line renderings for these elements. This should (a)
     	// not in the draw loop (b) maybe in something like a web worker
-    	
+
 //    	let bounds = this.getBounds(id_ranges);
-    	
+
 //    	this.batchGpuRead(gl, ["positionBuffer"], bounds, () => {
 //    		id_ranges.forEach((range, i) => {
 //    			let [id, [a, b]] = range;
@@ -612,10 +612,10 @@ export class AbstractBufferSet {
 //    			this.lineIndexBuffers.set(id, lineRenderer);
 //    		});
 //    	});
-    	
+
     	return this.storeInCacheAndReturn(null, result, nonce);
     }
-    
+
     getLines(requestedId, gl) {
     	let lines = this.lineIndexBuffers.get(requestedId);
     	if (lines) {
@@ -627,7 +627,7 @@ export class AbstractBufferSet {
     	this.generateLines(requestedId, gl);
     	return null;
     }
-    
+
     generateLines(requestedId, gl) {
     	if (this.reuse) {
             let lineRenderer = this.createLineRendererFromInstance(gl, 0, this.indexBuffer.N);
@@ -642,7 +642,7 @@ export class AbstractBufferSet {
 
     	let id_ranges = this.generateIdRanges(requestedId, gl);
 		let bounds = this.getBounds(id_ranges);
-		
+
 		if (id_ranges.length == 0) {
 			let lineRenderer = this.createLineRenderer(gl, requestedId, 0, 0);
 			this.lineIndexBuffers.set(requestedId, lineRenderer);
@@ -659,7 +659,7 @@ export class AbstractBufferSet {
 			});
 		}
     }
-    
+
     storeInCacheAndReturn(key, result, nonce) {
 //		this.visibleRanges.set(key, result);
     	if (nonce) {
@@ -669,7 +669,7 @@ export class AbstractBufferSet {
     	}
 		return result;
     }
-    
+
 	reset(viewer) {
 		this.positionsIndex = 0;
 		this.normalsIndex = 0;
@@ -692,7 +692,7 @@ export class AbstractBufferSet {
 		}
 		return this.uniqueIdSet.has(uniqueId);
 	}
-	
+
 	copy(gl, uniqueId) {
         let returnDictionary = {};
 
@@ -713,15 +713,15 @@ export class AbstractBufferSet {
 			let [lineIndexOffset, lineIndexLength] = [idx.lineIndicesStart, idx.lineIndicesLength];
 			const lineIndices = new Uint32Array(lineIndexLength);
 			let [minLineIndex, maxLineIndex] = [idx.minLineIndex, idx.maxLineIndex];
-			
+
 			for (let i=0; i<lineIndexLength; i++) {
 				lineIndices[i] = (this.batchGpuBuffers.lineIndices[-bounds.startLineIndex + lineIndexOffset + i] - minLineIndex) + 1;
 			}
 
     		let numVertices = maxIndex - minIndex + 1;
-    		
+
     		let toCopy = ["positionBuffer", "normalBuffer", "colorBuffer", "pickColorBuffer"];
-    		
+
     		for (var name of toCopy) {
     			let buffer = this[name];
     			let gpu_data = this.batchGpuBuffers[name];
@@ -732,12 +732,12 @@ export class AbstractBufferSet {
     			for (let j=0; j<numVertices * buffer.components; j++) {
     				new_gpu_data[j] = gpu_data[vertexOffset + j];
         		}
-    			
+
     			let shortName = name.replace("Buffer", "") + "s";
     			returnDictionary[shortName] = new_gpu_data;
     			returnDictionary["nr" + shortName.substr(0,1).toUpperCase() + shortName.substr(1)] = new_gpu_data.length;
     		}
-    		
+
     		returnDictionary.isCopy = true;
     		returnDictionary["uniqueIdSet"] = this.uniqueIdSet;
     		returnDictionary["indices"] = indices;
@@ -751,6 +751,7 @@ export class AbstractBufferSet {
 	}
 
 	setColor(gl, uniqueId, clr) {
+      console.log('abstract buffer set setColor')
         // Reusing buffer sets always results in a copy
         if (this.objects) {
             return false;
@@ -780,7 +781,7 @@ export class AbstractBufferSet {
 		for (var idx of idxs) {
 			let [offset, length] = [idx.color, idx.colorLength];
 			let bytes_per_elem = window[this.colorBuffer.js_type].BYTES_PER_ELEMENT;
-			
+
 			// Assumes there is just one index pair, this is for now always the case.
 			oldColors = new window[this.colorBuffer.js_type](length);
 
