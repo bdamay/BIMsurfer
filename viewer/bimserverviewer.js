@@ -51,9 +51,14 @@ export class BimServerViewer extends AbstractViewer {
 			}
 		}
 		this.layers.delete(roid);
+
 		this.viewer.dirty = 2;
 
 		// TODO probably a good idea to also shrink the model bounds
+    // should clear viewObjects Map also ?
+    this.viewer.viewObjects.clear()
+    this.viewer.viewObjectsByType.clear()
+
 	}
 
 	loadRevisionsByRoids(api, roids) {
