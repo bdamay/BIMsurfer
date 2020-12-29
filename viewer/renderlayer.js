@@ -8,7 +8,7 @@ import {FrozenBufferSet} from "./frozenbufferset.js";
 
 import {AvlTree} from "./collections/avltree.js";
 
-const outlineColor = new Float32Array([0, 1, 1, 0.1]); // i like light cyan
+const outlineColor = new Float32Array([0, 1, 1, 1]); // i like light cyan
 const false_true = [false, true];
 const UINT32_MAX = (new Uint32Array((new Int32Array([-1])).buffer))[0];
 

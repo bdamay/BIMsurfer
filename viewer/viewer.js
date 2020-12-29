@@ -713,7 +713,7 @@ export class Viewer {
       gl.disable(gl.STENCIL_TEST);
 
       for (var renderLayer of this.renderLayers) {
-        renderLayer.renderSelectionOutlines(this.selectedElements, 0.001); // let's say i like very thin selection line
+        renderLayer.renderSelectionOutlines(this.selectedElements, 0.002); // let's say i like very thin selection line
       }
     }
 
