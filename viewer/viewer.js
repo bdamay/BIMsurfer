@@ -255,7 +255,7 @@ export class Viewer {
       return Promise.resolve();
     }).then(() => {
       if (fireEvent) {
-        this.eventHandler.fire("selection_state_changed", elems, selected);
+        this.eventHandler.fire("selection_state_changed", elems, true); //selected);
       }
     });
   }
@@ -867,7 +867,7 @@ export class Viewer {
           if (this.selectedElements.size > 0) {
             this.eventHandler.fire("selection_state_set", new Set([uniqueId]), true);
             triggered = true;
-//                		this.eventHandler.fire("selection_state_changed", this.selectedElements, false);
+               		this.eventHandler.fire("selection_state_changed", this.selectedElements, true);
             this.selectedElements.clear();
             this.addToSelection(uniqueId);
           }
@@ -875,7 +875,7 @@ export class Viewer {
         if (!triggered) {
           if (this.selectedElements.has(uniqueId) && !params.onlyAdd) {
             this.selectedElements.delete(uniqueId);
-            this.eventHandler.fire("selection_state_changed", [uniqueId], false);
+            this.eventHandler.fire("selection_state_changed", [uniqueId], true);
           } else {
             this.addToSelection(uniqueId);
             this.eventHandler.fire("selection_state_changed", [uniqueId], true);
@@ -888,7 +888,7 @@ export class Viewer {
       return {object: viewObject, normal: normal, coordinates: this.tmp_unproject, depth: depth};
     } else if (params.select !== false) {
       if (this.selectedElements.size > 0) {
-        this.eventHandler.fire("selection_state_changed", this.selectedElements, false);
+        this.eventHandler.fire("selection_state_changed", this.selectedElements, true);
         this.selectedElements.clear();
       }
     }
