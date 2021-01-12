@@ -867,9 +867,10 @@ export class Viewer {
           if (this.selectedElements.size > 0) {
             this.eventHandler.fire("selection_state_set", new Set([uniqueId]), true);
             triggered = true;
-               		this.eventHandler.fire("selection_state_changed", this.selectedElements, true);
             this.selectedElements.clear();
             this.addToSelection(uniqueId);
+            // BDA fire AFTER adding to selection otherwise i get last selection
+            this.eventHandler.fire("selection_state_changed", this.selectedElements, true);
           }
         }
         if (!triggered) {
