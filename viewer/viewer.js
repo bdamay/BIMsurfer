@@ -740,7 +740,6 @@ export class Viewer {
   resetToDefaultView(modelBounds=this.modelBounds, animate=false) {
 //        this.camera.target = [0, 0, 0];
 //        this.camera.eye = [0, -1, 0];
-            console.error('bda mobile eye tracker  ' + this.camera.eye)
 
     this.camera.up = [0, 0, 1];
     this.camera.worldAxis = [ // Set the +Z axis as World "up"
@@ -760,7 +759,6 @@ export class Viewer {
       this.camera.viewFit({aabb: modelBounds, viewDirection: [0, -1, 0], animate: animate}); // Position camera so that entire model bounds are in view
       this.cameraSet = true;
       this.camera.forceBuild();
-            console.error('default viewfit vp   ' + this.camera.eye)
     }
   }
 

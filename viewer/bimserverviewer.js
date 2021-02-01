@@ -284,7 +284,6 @@ export class BimServerViewer extends AbstractViewer {
 				}
 
 				promise.then(() => {
-        console.error('loading model ' + this.viewer.camera.eye) // eye seem to have been rewrittne
 					this.viewer.dirty = 2;
 					var tilingPromise = Promise.resolve();
 					if (this.viewer.settings.tilingLayerEnabled && nrPrimitivesAbove > 0) {
@@ -309,7 +308,6 @@ export class BimServerViewer extends AbstractViewer {
 	}
 
 	loadDefaultLayer(api, defaultRenderLayer, roid, fieldsToInclude) {
-        console.error('loadDefaultLayer start ' + this.viewer.camera.eye)
 		//		document.getElementById("progress").style.display = "block";
 		var startLayer1 = performance.now();
 		//debugger;
