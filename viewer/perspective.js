@@ -11,10 +11,10 @@ export class Perspective extends Projection {
 
     constructor(viewer) {
     	super(viewer);
-    	
-        this._fov = 45;
-        this._near = 0.01;
-        this._far = 100;
+
+        this._fov = 45;  //original = 45 => the more = the more angle // 0.000 = orthogonal
+        this._near = 0.01; //0.01
+        this._far = 100; //100
     }
 
     build() {

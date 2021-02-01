@@ -99,6 +99,7 @@ export class BimServerViewer extends AbstractViewer {
 			this.totalStart = performance.now();
 
 			this.viewer.init().then(() => {
+
 				api.call("ServiceInterface", "listBoundingBoxes", {
 					roids: [project.lastRevisionId]
 				}, (bbs) => {
@@ -130,6 +131,7 @@ export class BimServerViewer extends AbstractViewer {
 				api.call("ServiceInterface", "getRevision", {
 					roid: roid
 				}, (revision) => {
+
 					this.internalLoadRevision(api, revision, nrPrimitivesBelow, nrPrimitivesAbove).then(resolve);
 				});
 			});
@@ -282,6 +284,7 @@ export class BimServerViewer extends AbstractViewer {
 				}
 
 				promise.then(() => {
+        console.error('loading model ' + this.viewer.camera.eye)
 					this.viewer.dirty = 2;
 					var tilingPromise = Promise.resolve();
 					if (this.viewer.settings.tilingLayerEnabled && nrPrimitivesAbove > 0) {
