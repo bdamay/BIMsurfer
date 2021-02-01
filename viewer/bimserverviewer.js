@@ -284,7 +284,7 @@ export class BimServerViewer extends AbstractViewer {
 				}
 
 				promise.then(() => {
-        console.error('loading model ' + this.viewer.camera.eye)
+        console.error('loading model ' + this.viewer.camera.eye) // eye seem to have been rewrittne
 					this.viewer.dirty = 2;
 					var tilingPromise = Promise.resolve();
 					if (this.viewer.settings.tilingLayerEnabled && nrPrimitivesAbove > 0) {
@@ -309,6 +309,7 @@ export class BimServerViewer extends AbstractViewer {
 	}
 
 	loadDefaultLayer(api, defaultRenderLayer, roid, fieldsToInclude) {
+        console.error('loadDefaultLayer start ' + this.viewer.camera.eye)
 		//		document.getElementById("progress").style.display = "block";
 		var startLayer1 = performance.now();
 		//debugger;
@@ -354,12 +355,14 @@ export class BimServerViewer extends AbstractViewer {
 			query.loaderSettings.vertexQuantizationMatrix = this.viewer.vertexQuantization.vertexQuantizationMatrixWithGlobalTranslation;
 		}
 
-		var geometryLoader = new BimserverGeometryLoader(0, api, defaultRenderLayer, [roid], this.settings.loaderSettings, null, this.stats, this.settings, query, null, defaultRenderLayer.gpuBufferManager);
+		var geometryLoader = new BimserverGeometryLoader(0, api, defaultRenderLayer, [roid], this.settings.loaderSettings,
+      null, this.stats, this.settings, query, null, defaultRenderLayer.gpuBufferManager);
 		if (this.settings.loaderSettings.quantizeVertices) {
 			geometryLoader.unquantizationMatrix = this.viewer.vertexQuantization.inverseVertexQuantizationMatrixWithGlobalTranslation;
 		}
 		defaultRenderLayer.registerLoader(geometryLoader.loaderId);
 		executor.add(geometryLoader).then(() => {
+
 			defaultRenderLayer.done(geometryLoader.loaderId);
 
 			this.viewer.stats.inc("Models", "Models loaded", 1);

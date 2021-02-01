@@ -553,7 +553,7 @@ export class Viewer {
     // Locks the camera so that intermittent mouse events will not
     // change the matrices until the camera is unlocked again.
     // @todo This might need some work to make sure events are
-    // processed timely and smoothly.
+    //   processed timely and smoothly.
     this.camera.lock();
 
     let gl = this.gl;
@@ -581,7 +581,9 @@ export class Viewer {
 
     if (this.modelBounds) {
       if (!this.cameraSet && this.settings.resetToDefaultViewOnLoad) { // HACK to look at model origin as soon as available
-        this.resetToDefaultView();
+
+        this.resetToDefaultView();   // bda -- this resets the view to an unwanted origin ?
+
       }
 
       // On what side of the plane is the camera eye?
@@ -738,15 +740,28 @@ export class Viewer {
   resetToDefaultView(modelBounds=this.modelBounds, animate=false) {
 //        this.camera.target = [0, 0, 0];
 //        this.camera.eye = [0, -1, 0];
+            console.error('bda mobile eye tracker  ' + this.camera.eye)
+
     this.camera.up = [0, 0, 1];
     this.camera.worldAxis = [ // Set the +Z axis as World "up"
       1, 0, 0, // Right
       0, 0, 1, // Up
       0, -1, 0  // Forward
     ];
-    this.camera.viewFit({aabb: modelBounds, viewDirection: [0, -1, 0], animate: animate}); // Position camera so that entire model bounds are in view
-    this.cameraSet = true;
-    this.camera.forceBuild();
+    if (typeof this.settings.viewpoint !== "undefined") {
+      // if settings has defined a viewpoint then we should use it
+            console.error('bda mobile eye tracker  ' + this.camera.eye)
+      this.camera.eye = this.settings.viewpoint.eye
+      this.camera.target = this.settings.viewpoint.target
+      this.cameraSet = true;
+    }
+    else
+    {
+      this.camera.viewFit({aabb: modelBounds, viewDirection: [0, -1, 0], animate: animate}); // Position camera so that entire model bounds are in view
+      this.cameraSet = true;
+      this.camera.forceBuild();
+            console.error('default viewfit vp   ' + this.camera.eye)
+    }
   }
 
   removeSectionPlaneWidget() {

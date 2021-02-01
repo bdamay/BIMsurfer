@@ -12,9 +12,8 @@ import {Orthographic} from "./orthographic.js";
  */
 export class Camera {
 
-  constructor(viewer, params) {
+    constructor(viewer) {
     this.viewer = viewer;
-    params = params || { eye: [100000.0,100000.0,100000.0]} // [20000, 0, 0]}
 
     this.perspective = new Perspective(viewer);
 
@@ -28,16 +27,7 @@ export class Camera {
 
     this._viewNormalMatrix = mat3.create();
 
-    if (Array.isArray(params.eye)) {
-      console.error('bda try specifying custom eye ')
-      this._eye = new AnimatedVec3(...params.eye); // World-space eye position
-
-    } else {
-      //this._eye = new AnimatedVec3(20.0, 0.0, 10.0); // World-space eye position
-      this._eye = new AnimatedVec3(2000000.0, 20000000.0, 100000.0); // World-space eye position
-    }
-
-
+        this._eye = new AnimatedVec3(0.0, 0.0, -10.0); // World-space eye position
     this._target = new AnimatedVec3(0.0, 0.0, 0.0); // World-space point-of-interest
 
     this._up = vec3.fromValues(0.0, 1.0, 0.0); // Camera's "up" vector, always orthogonal to eye->target
@@ -109,7 +99,6 @@ export class Camera {
   setModelBounds(bounds) {
     this._modelBounds = [];
 
-    //console.error('bda in setModelBounds' + bounds)
     this.perspective.setModelBounds(vec3.clone(bounds));
     this.orthographic.setModelBounds(vec3.clone(bounds));
 
@@ -312,6 +301,7 @@ export class Camera {
    @param {Float32Array} eye 3D position of the camera in World space.
    */
   set eye(eye) {
+    console.error('set eye ')
     if (!vec3.equals(this._eye.get(), eye)) {
       this._eye.get().set(eye);
       this._setDirty();
