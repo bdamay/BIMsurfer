@@ -301,7 +301,6 @@ export class Camera {
    @param {Float32Array} eye 3D position of the camera in World space.
    */
   set eye(eye) {
-    console.error('set eye ')
     if (!vec3.equals(this._eye.get(), eye)) {
       this._eye.get().set(eye);
       this._setDirty();

@@ -749,9 +749,11 @@ export class Viewer {
     ];
     if (typeof this.settings.viewpoint !== "undefined") {
       // if settings has defined a viewpoint then we should use it
-            console.error('bda mobile eye tracker  ' + this.camera.eye)
+            console.log('getting camera viewpoint from settings  ' + this.camera.eye)
       this.camera.eye = this.settings.viewpoint.eye
-      this.camera.target = this.settings.viewpoint.target
+      this.camera.target = this.settings.viewpoint.target || [0,0,0]
+      this.camera.up = this.settings.viewpoint.up  || [0,0,1]
+      this.camera.fov = this.settings.viewpoint.fov  || 45
       this.cameraSet = true;
     }
     else
