@@ -749,11 +749,13 @@ export class Viewer {
     ];
     if (typeof this.settings.viewpoint !== "undefined") {
       // if settings has defined a viewpoint then we should use it
-            console.log('getting camera viewpoint from settings  ' + this.camera.eye)
+      console.log('getting camera viewpoint from settings  ' + this.camera.eye)
       this.camera.eye = this.settings.viewpoint.eye
       this.camera.target = this.settings.viewpoint.target || [0,0,0]
       this.camera.up = this.settings.viewpoint.up  || [0,0,1]
       this.camera.fov = this.settings.viewpoint.fov  || 45
+      // bda should add sectionPlanes if any
+
       this.cameraSet = true;
     }
     else
@@ -782,6 +784,7 @@ export class Viewer {
     let p = this.pick({canvasPos: params.canvasPos, select: false});
     if (p.normal && p.coordinates && p.depth) {
       if (this.sectionPlaneIndex < this.sectionPlanes.planes.length) {
+        console.error('track section planes enabling')
         this.sectionPlanes.planes[this.sectionPlaneIndex].enable(params.canvasPos, p.coordinates, p.normal, p.depth);
         this.sectionPlaneIndex ++;
         this.dirty = 2;}
@@ -791,6 +794,19 @@ export class Viewer {
       this.sectionPlaneIndex = 0;
       return false;
     }}
+
+
+  addSectionPlane(position, direction) {
+    //adds a section plane to sectionPlanes given its position and direction(normal) (to current index)
+    if (this.sectionPlaneIndex < this.sectionPlanes.planes.length) {
+      direction = new Float32Array(direction)
+      var sp = this.sectionPlanes.planes[this.sectionPlaneIndex]
+      sp.enable([0, 0], position, direction, -100000)
+      this.sectionPlaneIndex++
+      this.drawScene()
+    }
+  }
+
 
   disableSectionPlane() {
     this.sectionPlanes.planes[0].disable();
