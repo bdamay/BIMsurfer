@@ -754,9 +754,9 @@ export class Viewer {
       this.camera.target = this.settings.viewpoint.target || [0,0,0]
       this.camera.up = this.settings.viewpoint.up  || [0,0,1]
       this.camera.fov = this.settings.viewpoint.fov  || 45
-      // bda should add sectionPlanes if any
-
       this.cameraSet = true;
+      // bda should add sectionPlanes if any provided
+      this.settings.viewpoint.sectionPlanes.forEach(x => this.addSectionPlane(x.location, x.direction))
     }
     else
     {
@@ -803,7 +803,7 @@ export class Viewer {
       var sp = this.sectionPlanes.planes[this.sectionPlaneIndex]
       sp.enable([0, 0], position, direction, -100000)
       this.sectionPlaneIndex++
-      this.drawScene()
+      //this.drawScene()
     }
   }
 
