@@ -791,7 +791,11 @@ export class Viewer {
     let p = this.pick({canvasPos: params.canvasPos, select: false});
     if (p.normal && p.coordinates && p.depth) {
       if (this.sectionPlaneIndex < this.sectionPlanes.planes.length) {
-        this.sectionPlanes.planes[this.sectionPlaneIndex].enable(params.canvasPos, p.coordinates, p.normal, p.depth);
+        console.error('track section coordinates')
+
+        let coordinates = new Float32Array(p.coordinates) // actually clone to avoid single coordinate reference object for all sectionsPlanes
+        let normal = new Float32Array(p.normal)
+        this.sectionPlanes.planes[this.sectionPlaneIndex].enable(params.canvasPos, coordinates, normal, p.depth);
         this.sectionPlaneIndex ++;
         this.dirty = 2;}
       return true;
@@ -808,7 +812,7 @@ export class Viewer {
       direction = new Float32Array(direction)
       var sp = this.sectionPlanes.planes[this.sectionPlaneIndex]
       //sp.position(position,direction)
-      sp.enable([100, 100], position, direction, 1000)
+      sp.enable([0, 0], position, direction, 18000)
       this.sectionPlaneIndex++;
       this.dirty=2; // bda don't really get what dirty is
 
