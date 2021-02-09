@@ -58,11 +58,11 @@ export class SectionPlane {
 
         vec3.cross(_tmp_sectionU, normal, ref);
         vec3.cross(_tmp_sectionV, normal, _tmp_sectionU);
-        vec3.scale(_tmp_sectionU, _tmp_sectionU, cameraDistance / 50.);
-        vec3.scale(_tmp_sectionV, _tmp_sectionV, cameraDistance / 50.);
+        vec3.scale(_tmp_sectionU, _tmp_sectionU, cameraDistance / 20.);
+        vec3.scale(_tmp_sectionV, _tmp_sectionV, cameraDistance / 20.);
 
         // ---
-        
+
         vec3.add(_tmp_sectionA, _tmp_sectionU, coordinates);
         vec3.add(_tmp_sectionB, _tmp_sectionU, coordinates);
 
@@ -102,6 +102,10 @@ export class SectionPlane {
 
     enable(canvasPos, coordinates, normal, depth) {
         this.values.set(normal.subarray(0,3));
+        // bda added this to enable sectionPlane without quad initialisation errors
+        this.values[3] = vec3.dot(coordinates, normal);
+        this.quad.position(this.viewer.modelBounds, this.values);
+
         this.initialSectionPlaneD = this.values[3] = vec3.dot(coordinates, normal);
         this.values2.set(this.values);
         this.isDisabled = false;
@@ -142,7 +146,7 @@ export class SectionPlane {
         _tmp_section_dir_2d.set(this.values2);
         _tmp_section_dir_2d[3] = 0.;
         vec4.transformMat4(_tmp_section_dir_2d, _tmp_section_dir_2d, this.viewer.camera.viewProjMatrix);
-        let cp = [canvasPos[0] / this.viewer.width, - canvasPos[1] / this.viewer.height];        
+        let cp = [canvasPos[0] / this.viewer.width, - canvasPos[1] / this.viewer.height];
         vec2.subtract(_tmp_section_dir_2d.subarray(2), cp, this.DownAt);
         _tmp_section_dir_2d[1] /= this.viewer.width / this.viewer.height;
         let d = vec2.dot(_tmp_section_dir_2d, _tmp_section_dir_2d.subarray(2)) * this.depth;

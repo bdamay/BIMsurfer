@@ -749,14 +749,21 @@ export class Viewer {
     ];
     if (typeof this.settings.viewpoint !== "undefined") {
       // if settings has defined a viewpoint then we should use it
+
       console.log('getting camera viewpoint from settings  ' + this.camera.eye)
       this.camera.eye = this.settings.viewpoint.eye
       this.camera.target = this.settings.viewpoint.target || [0,0,0]
       this.camera.up = this.settings.viewpoint.up  || [0,0,1]
       this.camera.fov = this.settings.viewpoint.fov  || 45
+
       this.cameraSet = true;
-      // bda should add sectionPlanes if any provided
+
+      this.sectionPlanes = new SectionPlaneSet({viewer: this, n: 6});
+      //TODO BDA doing this triggers many wsquad errors => can't yet really find out why
       this.settings.viewpoint.sectionPlanes.forEach(x => this.addSectionPlane(x.location, x.direction))
+      //this.camera.forceBuild();
+      //this.drawScene()
+      // bda should add sectionPlanes if any provided
     }
     else
     {
@@ -784,7 +791,6 @@ export class Viewer {
     let p = this.pick({canvasPos: params.canvasPos, select: false});
     if (p.normal && p.coordinates && p.depth) {
       if (this.sectionPlaneIndex < this.sectionPlanes.planes.length) {
-        console.error('track section planes enabling')
         this.sectionPlanes.planes[this.sectionPlaneIndex].enable(params.canvasPos, p.coordinates, p.normal, p.depth);
         this.sectionPlaneIndex ++;
         this.dirty = 2;}
@@ -801,9 +807,11 @@ export class Viewer {
     if (this.sectionPlaneIndex < this.sectionPlanes.planes.length) {
       direction = new Float32Array(direction)
       var sp = this.sectionPlanes.planes[this.sectionPlaneIndex]
-      sp.enable([0, 0], position, direction, -100000)
-      this.sectionPlaneIndex++
-      //this.drawScene()
+      //sp.position(position,direction)
+      sp.enable([100, 100], position, direction, 1000)
+      this.sectionPlaneIndex++;
+      this.dirty=2; // bda don't really get what dirty is
+
     }
   }
 
